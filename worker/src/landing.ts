@@ -2,7 +2,7 @@ import type { Context } from "./context.ts";
 import { escapeHtml, htmlPage } from "./pages.ts";
 import { isSetupAvailable } from "./passkeys.ts";
 
-const INSTALL_COMMAND = "npm install -g noenv-cli";
+const INSTALL_COMMAND = "npm install -g @thisisamank/noenv-cli";
 
 export async function landingPage({ request, env }: Context): Promise<Response> {
   const origin = new URL(request.url).origin;

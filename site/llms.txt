@@ -12,5 +12,5 @@
 ## Get started
 
 - [Deploy to Cloudflare](https://deploy.workers.cloudflare.com/?url=https://github.com/thisisamank/noenv): one-click deployment
-- [noenv-cli on npm](https://www.npmjs.com/package/noenv-cli): `npm install -g noenv-cli`
+- [@thisisamank/noenv-cli on npm](https://www.npmjs.com/package/@thisisamank/noenv-cli): `npm install -g @thisisamank/noenv-cli`
 - [Source and README](https://github.com/thisisamank/noenv): setup steps, commands, and design

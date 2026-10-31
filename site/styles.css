@@ -142,7 +142,8 @@ footer .right { margin-left: auto; display: flex; gap: 20px; }
   .steps li { padding-left: 48px; }
   .steps li::before { position: absolute; left: 0; top: 0; margin: 0; }
   section { padding-top: 80px; }
-  .install { font-size: 13px; }
+  .install { font-size: 11.5px; white-space: nowrap; padding-left: 12px; max-width: 100%; }
+  .install span { margin-right: 6px; }
   .hero-video { aspect-ratio: 1 / 1; object-position: 10% 50%; }
 }
 

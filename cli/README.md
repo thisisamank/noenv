@@ -1,4 +1,4 @@
-# noenv-cli
+# @thisisamank/noenv-cli
 
 The command-line client for [noenv](https://github.com/thisisamank/noenv): encrypted environment variables that load when you `cd` into a repo, and unload when you leave.
 
@@ -18,7 +18,7 @@ You need a noenv server. It runs on your own Cloudflare account; see [deploy noe
 ## Install
 
 ```sh
-npm install -g noenv-cli
+npm install -g @thisisamank/noenv-cli
 ```
 
 Requires Node.js 22 or newer.

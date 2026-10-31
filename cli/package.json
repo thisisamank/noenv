@@ -1,5 +1,5 @@
 {
-  "name": "noenv-cli",
+  "name": "@thisisamank/noenv-cli",
   "version": "0.1.1",
   "description": "Encrypted environment variables that load when you cd into a repo. CLI for noenv.",
   "type": "module",
@@ -36,5 +36,8 @@
     "@noenv/policy": "*",
     "@noenv/worker": "*",
     "esbuild": "^0.28.2"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

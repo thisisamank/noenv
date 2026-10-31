@@ -9,7 +9,7 @@
 <p align="center">
   <a href="https://noenv.thisisamank.in">Website</a> ·
   <a href="https://noenv.thisisamank.in/assets/tour.mp4">40-second demo</a> ·
-  <a href="https://www.npmjs.com/package/noenv-cli">npm</a>
+  <a href="https://www.npmjs.com/package/@thisisamank/noenv-cli">npm</a>
 </p>
 
 <p align="center">
@@ -21,7 +21,7 @@
 </p>
 
 ```console
-$ npm install -g noenv-cli
+$ npm install -g @thisisamank/noenv-cli
 $ cd ~/code/backend
 noenv: loaded 12 secrets for github.com/acme/backend (development)
 $ npm run dev        # your app sees DATABASE_URL, STRIPE_KEY, …
@@ -52,7 +52,7 @@ Deploy, create a passkey, install the CLI, approve your terminal, and move your 
 **3. Install the CLI.** It needs Node.js 22 or newer.
 
 ```sh
-npm install -g noenv-cli
+npm install -g @thisisamank/noenv-cli
 ```
 
 **4. Connect your shell.** Add these lines to `~/.zshrc` or `~/.bashrc`. The dashboard shows them with your URL filled in.
@@ -122,7 +122,7 @@ npm install
 npm test             # unit and integration tests
 npm run typecheck
 npm run setup -- --admin you@example.com   # deploy from this checkout with your wrangler login
-npm run build -w noenv-cli && cd cli && npm link   # use the local CLI instead of the npm one
+npm run build -w @thisisamank/noenv-cli && cd cli && npm link   # use the local CLI instead of the npm one
 ```
 
 The code is split into `packages/` (shared libraries), `worker/` (the API), `cli/`, and `dashboard/`. See [spec.md](spec.md) for the full design.
