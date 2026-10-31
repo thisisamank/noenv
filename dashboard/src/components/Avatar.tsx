@@ -1,8 +1,8 @@
-import { avatarTone, initials } from "../format.ts";
+import { initials } from "../format.ts";
 
 export function Avatar({ email }: { email: string }) {
   return (
-    <span className={`avatar a${avatarTone(email)}`} title={email}>
+    <span className="avatar" title={email}>
       {initials(email)}
     </span>
   );

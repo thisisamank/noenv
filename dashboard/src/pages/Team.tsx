@@ -65,7 +65,7 @@ export function Team() {
                         <div>
                           {displayName(user.email)} {user.isAdmin && <span className="pill">Org admin</span>}
                         </div>
-                        <div className="muted" style={{ fontSize: 12.5 }}>
+                        <div className="muted small">
                           {user.email}
                         </div>
                       </div>
@@ -79,7 +79,7 @@ export function Team() {
                     {project && (
                       <select
                         aria-label={`Role for ${user.email} in ${project.repo}`}
-                        style={{ height: 30, width: 110 }}
+                        style={{ height: 28, width: 112 }}
                         value={project.role}
                         onChange={(event) =>
                           run(

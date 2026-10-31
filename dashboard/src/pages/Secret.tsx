@@ -40,7 +40,7 @@ export function SecretPage({ repo, environment, name }: { repo: string; environm
         </a>
       </div>
       <div className="head">
-        <h1 className="mono" style={{ fontSize: 19 }}>
+        <h1 className="mono">
           {isNew ? "New secret" : name}
         </h1>
       </div>

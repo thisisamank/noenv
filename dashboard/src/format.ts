@@ -33,12 +33,6 @@ export function initials(email: string): string {
   return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? parts[0]?.[1] ?? "")).toUpperCase();
 }
 
-export function avatarTone(email: string): number {
-  let hash = 0;
-  for (const char of email) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  return (hash % 6) + 1;
-}
-
 export function environmentTone(name: string): "dev" | "staging" | "prod" | "" {
   if (/^prod/.test(name)) return "prod";
   if (/^(stag|preview|qa|test)/.test(name)) return "staging";

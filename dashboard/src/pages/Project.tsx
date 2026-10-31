@@ -34,7 +34,7 @@ export function ProjectPage({ repo, environment }: { repo: string; environment?:
           <span className="title-icon">
             <Icon name="branch" />
           </span>
-          <h1 className="mono" style={{ fontSize: 19 }}>
+          <h1 className="mono">
             {project.repo}
           </h1>
           <button className="icon-btn" aria-label="Copy repository" onClick={() => navigator.clipboard.writeText(project.repo)}>
@@ -102,7 +102,7 @@ function EnvironmentTabs({ project, current }: { project: Project; current: stri
               pattern="[A-Za-z0-9_-]+"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              style={{ height: 30, width: 130 }}
+              style={{ height: 28, width: 128 }}
               required
             />
             <button className="btn sm primary">Create</button>
@@ -181,13 +181,8 @@ function Secrets({ project, environment }: { project: Project; environment: stri
                   </td>
                   <td>
                     <div className="row-actions">
-                      {canWrite && (
-                        <a className="btn sm" href={secretHref(secret.name)}>
-                          Edit
-                        </a>
-                      )}
                       <a className="btn sm" href={secretHref(secret.name)}>
-                        History
+                        {canWrite ? "Edit" : "History"}
                       </a>
                     </div>
                   </td>
@@ -223,7 +218,7 @@ function PolicyCard({ project, environment }: { project: Project; environment: s
             <span className={`pill ${MODE_TONE[policy.data.dotenv.mode]}`}>{capitalize(policy.data.dotenv.mode)}</span>
           </li>
           <li>
-            <span className="muted">Min. role</span>
+            <span className="muted">Minimum role</span>
             <span>{capitalize(policy.data.environmentMinRole)}</span>
           </li>
         </ul>

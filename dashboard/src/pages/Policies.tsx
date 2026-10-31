@@ -204,7 +204,7 @@ function Reach({ repo, environment }: { repo?: string; environment?: string }) {
   return (
     <div className="reach">
       <Icon name="alert" />
-      {count ? `Removes .env files on ${count} ${count === 1 ? "device" : "devices"} after migration.` : "Removes .env files on developer devices after migration."}
+      {count ? `Removes .env files on ${count} ${count === 1 ? "device" : "devices"} after migration` : "Removes .env files on developer devices after migration"}
     </div>
   );
 }
