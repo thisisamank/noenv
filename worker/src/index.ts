@@ -4,7 +4,7 @@ import type { Context, Env, Handler } from "./context.ts";
 import { issueSessionToken, startDeviceAuth } from "./device.ts";
 import { withEnvironment, withOrgAdmin, withProject, withUser } from "./guards.ts";
 import { HttpError, json } from "./http.ts";
-import { readInvite, regenerateInvite } from "./invites.ts";
+import { cancelInvite, readInvite, regenerateInvite } from "./invites.ts";
 import { landingPage } from "./landing.ts";
 import {
   loginOptions,
@@ -77,6 +77,7 @@ const routes: Route[] = [
   route("GET", "/v1/users/lookup", withUser(findUser)),
   route("POST", "/v1/users", withOrgAdmin(inviteUser)),
   route("POST", "/v1/users/:userId/invite", withOrgAdmin(regenerateInvite)),
+  route("DELETE", "/v1/users/:userId/invite", withOrgAdmin(cancelInvite)),
 
   route("GET", "/v1/devices", withOrgAdmin(listDevices)),
   route("DELETE", "/v1/devices/:deviceId", withOrgAdmin(signOutDevice)),

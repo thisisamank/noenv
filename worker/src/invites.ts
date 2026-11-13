@@ -52,6 +52,27 @@ export async function regenerateInvite(context: UserContext): Promise<Response> 
   return json(await sendInvite(context, userId, user.email));
 }
 
+export async function cancelInvite(context: UserContext): Promise<Response> {
+  const { env } = context;
+  const userId = identifierParam(context, "userId");
+  const user = await env.DB.prepare(
+    `SELECT u.email, u.is_admin = 1 AS isAdmin,
+            EXISTS (SELECT 1 FROM passkeys p WHERE p.user_id = u.id) AS hasPasskey,
+            EXISTS (SELECT 1 FROM secret_versions v WHERE v.author_id = u.id) AS hasHistory
+     FROM users u WHERE u.id = ?`,
+  )
+    .bind(userId)
+    .first<{ email: string; isAdmin: number; hasPasskey: number; hasHistory: number }>();
+  if (!user) {
+    throw new HttpError(404, "user not found");
+  }
+  if (user.hasPasskey || user.isAdmin || user.hasHistory) {
+    throw new HttpError(409, `${user.email} has already joined, so there is no invite to cancel`);
+  }
+  await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(userId).run();
+  return new Response(null, { status: 204 });
+}
+
 export async function sendInvite(context: UserContext, userId: string, email: string): Promise<{ inviteUrl: string; emailed: boolean }> {
   const { request, env } = context;
   const inviteUrl = await createInviteLink(env.DB, request, userId);

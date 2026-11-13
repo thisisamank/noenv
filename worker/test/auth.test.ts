@@ -139,3 +139,24 @@ test("signing out ends the browser session", async () => {
   assert.match(out.headers.get("Set-Cookie") ?? "", /Max-Age=0/);
   assert.equal((await api("GET", "/v1/me", { cookie: session })).status, 401);
 });
+
+test("an admin cancels a pending invite, and the link stops working", async () => {
+  const token = await invite("cy@example.com");
+  const cy = (await api("GET", "/v1/users", { token: admin })).body.users.find((user: any) => user.email === "cy@example.com");
+
+  const anaSession = sessionFrom((await signIn(ana)).result);
+  assert.equal((await api("DELETE", `/v1/users/${cy.id}/invite`, { cookie: anaSession })).status, 403);
+
+  assert.equal((await api("DELETE", `/v1/users/${cy.id}/invite`, { token: admin })).status, 204);
+  assert.equal((await api("GET", `/v1/invites/${token}`)).status, 404);
+  const emails = (await api("GET", "/v1/users", { token: admin })).body.users.map((user: any) => user.email);
+  assert.ok(!emails.includes("cy@example.com"));
+  assert.equal((await api("DELETE", `/v1/users/${cy.id}/invite`, { token: admin })).status, 404);
+});
+
+test("an invite cannot be cancelled for someone who joined or is an admin", async () => {
+  const { users } = (await api("GET", "/v1/users", { token: admin })).body;
+  const joined = users.find((user: any) => user.email === "ana@example.com");
+  assert.equal((await api("DELETE", `/v1/users/${joined.id}/invite`, { token: admin })).status, 409);
+  assert.equal((await api("DELETE", "/v1/users/usr_admin/invite", { token: admin })).status, 409);
+});
