@@ -62,6 +62,7 @@
             <ul>
 <li><a href="/guides/getting-started" aria-current="page">Getting started</a></li>
 <li><a href="/guides/migrate-from-env">Migrate from .env</a></li>
+<li><a href="/guides/multiple-accounts">Multiple accounts</a></li>
 <li><a href="/guides/agents-ci-and-workers">Agents, CI, and Workers</a></li>
 <li><a href="/guides/team-and-access">Team and access</a></li>
 <li><a href="/guides/policies-and-devices">Policies and devices</a></li>
@@ -145,17 +146,7 @@ Saved API_KEY as version 1 in github.com/acme/backend (development)
 </table>
 
 <h2 id="accounts">Work with more than one team</h2>
-<p>Each noenv deployment is one team. Add each deployment as a named account, and tell noenv which repositories belong to it:</p>
-<pre><code>noenv account add personal https://noenv.me.dev
-noenv account add acme https://noenv.acme.com github.com/acme
-noenv auth acme   <span class="c"># sign in to each account once</span></code></pre>
-<p>The CLI picks the account for each repository in this order:</p>
-<ol>
-  <li><code>NOENV_ACCOUNT</code> in the shell.</li>
-  <li>The longest repository prefix that matches the git <code>origin</code>.</li>
-  <li>The default account. The first account you add is the default.</li>
-  <li><code>NOENV_URL</code>.</li>
-</ol>
+<p>Each noenv deployment is one team. To use several deployments on one laptop, add each one as a named account. See <a href="/guides/multiple-accounts">Multiple accounts</a>.</p>
 
 <nav class="pager" aria-label="More guides"><a class="next" href="/guides/migrate-from-env"><span>Next</span><b>Migrate from .env</b></a></nav>
       </article>
