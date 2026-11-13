@@ -10,8 +10,7 @@ export type GitOrigin = {
 
 export async function readGitOrigin(dir: string): Promise<GitOrigin | null> {
   try {
-    const root = await git(dir, "rev-parse", "--show-toplevel");
-    const url = await git(dir, "config", "--get", "remote.origin.url");
+    const [root, url] = await Promise.all([git(dir, "rev-parse", "--show-toplevel"), git(dir, "config", "--get", "remote.origin.url")]);
     return { root, url };
   } catch {
     return null;
