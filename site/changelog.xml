@@ -6,6 +6,13 @@
   <id>https://noenv.thisisamank.in/changelog</id>
   <updated>2026-11-13T00:00:00Z</updated>
   <entry>
+    <title>The deployment in .noenv picks the account</title>
+    <link href="https://noenv.thisisamank.in/changelog#cli-0-3-0"/>
+    <id>https://noenv.thisisamank.in/changelog#cli-0-3-0</id>
+    <updated>2026-11-13T00:00:00Z</updated>
+    <content type="html">&lt;p&gt;Each repository's &lt;code&gt;.noenv&lt;/code&gt; file names its deployment, and every teammate gets the same account name from the deployment.&lt;/p&gt;&lt;h3&gt;Added&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;&lt;code&gt;noenv account add URL&lt;/code&gt; asks the deployment for its team name and saves the account under it. Admins set the name with &lt;code&gt;TEAM_NAME&lt;/code&gt; at deploy time. &lt;code&gt;noenv account add URL NAME&lt;/code&gt; still sets your own name.&lt;/li&gt;&lt;/ul&gt;&lt;h3&gt;Changed&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;&lt;code&gt;noenv init&lt;/code&gt; saves the deployment URL in &lt;code&gt;.noenv&lt;/code&gt;. With more than one account, it asks which one to use. Agents pass &lt;code&gt;noenv init --account NAME&lt;/code&gt;.&lt;/li&gt;&lt;li&gt;The shell hook, &lt;code&gt;noenv exec&lt;/code&gt;, and all other commands use the local account whose URL matches &lt;code&gt;.noenv&lt;/code&gt;, whatever its name. Teammates can name the account differently.&lt;/li&gt;&lt;li&gt;If no local account has that URL, noenv prints the command to add it. It never connects to a URL from &lt;code&gt;.noenv&lt;/code&gt; on its own.&lt;/li&gt;&lt;/ul&gt;&lt;h3&gt;Removed&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;Repository prefixes. Run &lt;code&gt;noenv init&lt;/code&gt; in each repository to save its deployment.&lt;/li&gt;&lt;/ul&gt;</content>
+  </entry>
+  <entry>
     <title>The shell signs you in on its own again</title>
     <link href="https://noenv.thisisamank.in/changelog#cli-0-2-1"/>
     <id>https://noenv.thisisamank.in/changelog#cli-0-2-1</id>
