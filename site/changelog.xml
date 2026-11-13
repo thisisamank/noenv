@@ -6,6 +6,13 @@
   <id>https://noenv.thisisamank.in/changelog</id>
   <updated>2026-11-13T00:00:00Z</updated>
   <entry>
+    <title>The shell signs you in on its own again</title>
+    <link href="https://noenv.thisisamank.in/changelog#cli-0-2-1"/>
+    <id>https://noenv.thisisamank.in/changelog#cli-0-2-1</id>
+    <updated>2026-11-13T00:00:00Z</updated>
+    <content type="html">&lt;p&gt;Opening a terminal in a repository starts and finishes the sign-in, instead of asking you to run noenv auth.&lt;/p&gt;&lt;h3&gt;Fixed&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;The background sign-in keeps waiting through network errors, server errors, and rate limits. Before, a Wi-Fi drop or a laptop waking from sleep stopped it.&lt;/li&gt;&lt;li&gt;When a sign-in is pending but the process that waits for it has stopped, the shell starts a new one.&lt;/li&gt;&lt;li&gt;After a sign-in fails or its code expires, entering the repository again starts a new sign-in.&lt;/li&gt;&lt;/ul&gt;</content>
+  </entry>
+  <entry>
     <title>Agents, Wrangler push, and named accounts</title>
     <link href="https://noenv.thisisamank.in/changelog#2026-11-13"/>
     <id>https://noenv.thisisamank.in/changelog#2026-11-13</id>
