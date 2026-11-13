@@ -29,6 +29,9 @@
       "EMAIL_FROM": {
         "description": "Optional. The address invites are sent from, on a domain with [Cloudflare Email Sending](https://developers.cloudflare.com/email-service/) enabled, like `noenv@example.com`. Type `none` to skip email and share invite links yourself."
       },
+      "TEAM_NAME": {
+        "description": "Optional. Your team's name, like `Acme`. The CLI saves this deployment under it, so every teammate gets the same account name. Leave it empty to use a name from the Worker's address."
+      },
       "EMAIL": {
         "description": "Sends invites and the admin setup link when `EMAIL_FROM` is set. Nothing to configure."
       }

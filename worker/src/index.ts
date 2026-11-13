@@ -1,6 +1,7 @@
 import { approveDevice, redirectToActivation } from "./activation.ts";
 import { listDevices, reportCompliance, signOutDevice } from "./compliance.ts";
 import type { Context, Env, Handler } from "./context.ts";
+import { deploymentInfo } from "./deployment.ts";
 import { issueSessionToken, startDeviceAuth } from "./device.ts";
 import { withEnvironment, withOrgAdmin, withProject, withUser } from "./guards.ts";
 import { HttpError, json } from "./http.ts";
@@ -70,6 +71,7 @@ const routes: Route[] = [
   route("POST", "/v1/setup", setupVerify),
   route("POST", "/v1/setup/email", emailSetupLink),
 
+  route("GET", "/v1/deployment", deploymentInfo),
   route("GET", "/v1/me", withUser(getMe)),
   route("POST", "/v1/revisions", withUser(readRevisions)),
   route("PUT", "/v1/me/public-key", withUser(setPublicKey)),

@@ -8,6 +8,7 @@ export type Env = {
   ADMIN_EMAIL?: string;
   EMAIL?: SendEmail;
   EMAIL_FROM?: string;
+  TEAM_NAME?: string;
 };
 
 export type Context = {

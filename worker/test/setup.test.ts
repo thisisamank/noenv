@@ -41,3 +41,8 @@ test("only the deploy-time admin email can create the first passkey, once", asyn
   assert.deepEqual((await api(env, "GET", "/v1/setup")).body, { available: false, email: false });
   assert.equal((await api(env, "POST", "/v1/setup/options", { email: "owner@example.com" })).status, 403);
 });
+
+test("the deployment tells the CLI its team name", async () => {
+  assert.deepEqual((await api(worker.env, "GET", "/v1/deployment")).body, { name: "noenv" });
+  assert.deepEqual((await api({ ...worker.env, TEAM_NAME: " Acme " }, "GET", "/v1/deployment")).body, { name: "Acme" });
+});
