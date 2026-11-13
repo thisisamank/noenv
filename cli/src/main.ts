@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { accountCommand } from "./commands/account.ts";
 import { authCommand, statusCommand } from "./commands/auth.ts";
+import { execCommand } from "./commands/exec.ts";
 import { migrateCommand } from "./commands/migrate.ts";
 import { grantCommand, initCommand, inviteCommand, revokeCommand } from "./commands/project.ts";
 import { secretCommand } from "./commands/secret.ts";
@@ -18,6 +19,9 @@ const USAGE = `usage: noenv <command>
   auth [NAME]                sign in to an account (default: the one for this repo)
   status                     show the account, user, and project
   init                       create the project and environment for this repository
+  exec -- COMMAND            run COMMAND with this repository's secrets, for agents,
+                             scripts, and CI; it picks the account and project from
+                             the current directory
   secret set KEY             save a secret (the value is read without echo)
   secret list                list secrets in this environment
   secret history KEY         list the versions of a secret
@@ -33,6 +37,7 @@ const commands: Record<string, (args: string[]) => Promise<void>> = {
   shell: shellCommand,
   "hook-env": hookEnvCommand,
   refresh: refreshCommand,
+  exec: execCommand,
   watch: watchCommand,
   auth: authCommand,
   status: statusCommand,

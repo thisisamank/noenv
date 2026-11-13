@@ -10,6 +10,7 @@ import { addUser, fetchWorker, startWorker, type TestWorker } from "@noenv/worke
 import { api, repoPath } from "../src/api.ts";
 import type { Deployment } from "../src/deployment.ts";
 import { writeJsonFile } from "../src/files.ts";
+import { withoutLoadedSecrets } from "../src/commands/exec.ts";
 import { hookEnv, type HookInput, type HookOutput } from "../src/hook-env.ts";
 import { refresh } from "../src/refresh.ts";
 import { findTarget } from "../src/target.ts";
@@ -194,6 +195,12 @@ test("entering a repository with cached secrets makes no network request", async
   assert.deepEqual(result.messages, ["loaded 1 secrets for github.com/acme/backend (development)"]);
   assert.equal(bash(`${result.lines.join("\n")}\nprintf '%s' "$API_KEY"`), SECRET);
   assert.ok(result.refresh);
+});
+
+test("exec restores the values the shell hook replaced", () => {
+  const state = Buffer.from(JSON.stringify({ repo: "r", environment: "e", retry: false, previous: { API_KEY: "original", DB: null } })).toString("base64");
+  const env = withoutLoadedSecrets({ _NOENV_STATE: state, API_KEY: "from-a", DB: "from-a", PATH: "/bin" });
+  assert.deepEqual(env, { API_KEY: "original", PATH: "/bin" });
 });
 
 test("NOENV_ENVIRONMENT selects another environment", async () => {
