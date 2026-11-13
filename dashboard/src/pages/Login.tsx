@@ -53,7 +53,7 @@ export function Login({ onSignedIn }: { onSignedIn: () => void }) {
             ? "Check your inbox. Open the link in the email to create your admin passkey."
             : "We'll email a setup link to the admin email you entered when you deployed."}
         </p>
-        <button className="btn primary wide" onClick={send} disabled={busy}>
+        <button className="btn primary wide" onClick={send} disabled={busy} aria-busy={busy}>
           {sent ? "Send it again" : "Email me the setup link"}
         </button>
         <ErrorLine message={error} />
@@ -68,7 +68,7 @@ export function Login({ onSignedIn }: { onSignedIn: () => void }) {
         <p className="muted">Use the admin email you entered when you deployed.</p>
         <form onSubmit={submit} style={{ display: "grid", gap: 12, width: "100%" }}>
           <input type="email" placeholder="you@company.com" aria-label="Admin email" value={email} onChange={(event) => setEmail(event.target.value)} required autoFocus />
-          <button className="btn primary wide" disabled={busy}>
+          <button className="btn primary wide" disabled={busy} aria-busy={busy}>
             Create admin passkey
           </button>
         </form>
@@ -79,7 +79,7 @@ export function Login({ onSignedIn }: { onSignedIn: () => void }) {
 
   return (
     <AuthScreen title="Sign in to noenv">
-      <button className="btn primary wide" onClick={() => run(signInWithPasskey)} disabled={busy}>
+      <button className="btn primary wide" onClick={() => run(signInWithPasskey)} disabled={busy} aria-busy={busy}>
         Sign in with passkey
       </button>
       <ErrorLine message={error} />

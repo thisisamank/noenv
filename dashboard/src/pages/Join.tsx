@@ -33,7 +33,7 @@ export function Join({ token, onJoined }: { token: string; onJoined: () => void 
       <p className="muted">
         Signing up as <b className="text">{invite.data.email}</b>
       </p>
-      <button className="btn primary wide" onClick={join} disabled={busy}>
+      <button className="btn primary wide" onClick={join} disabled={busy} aria-busy={busy}>
         Create passkey
       </button>
       <ErrorLine message={error} />

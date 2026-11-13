@@ -148,7 +148,7 @@ function InviteForm({ project, canInviteNewUsers, onInvited }: { project: Projec
             </option>
           ))}
         </select>
-        <button className="btn primary" disabled={busy}>
+        <button className="btn primary" disabled={busy} aria-busy={busy}>
           <Icon name="plus" />
           Invite
         </button>

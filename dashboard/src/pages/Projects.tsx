@@ -52,7 +52,7 @@ export function Projects() {
               onChange={(event) => setRemote(event.target.value)}
               required
             />
-            <button className="btn primary" disabled={busy}>
+            <button className="btn primary" disabled={busy} aria-busy={busy}>
               <Icon name="plus" />
               Add project
             </button>

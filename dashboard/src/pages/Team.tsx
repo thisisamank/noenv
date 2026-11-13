@@ -180,7 +180,7 @@ function InviteForm({ onInvited }: { onInvited: () => void }) {
           </option>
         ))}
       </select>
-      <button className="btn primary" disabled={busy}>
+      <button className="btn primary" disabled={busy} aria-busy={busy}>
         <Icon name="mail" />
         Invite
       </button>

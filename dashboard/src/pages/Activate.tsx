@@ -44,7 +44,7 @@ export function Activate({ code }: { code?: string }) {
         value={value}
         onChange={(event) => setValue(event.target.value.toUpperCase())}
       />
-      <button className="btn primary wide" onClick={approve} disabled={state === "busy" || value.length !== 9}>
+      <button className="btn primary wide" onClick={approve} disabled={state === "busy" || value.length !== 9} aria-busy={state === "busy"}>
         Approve
       </button>
       <ErrorLine message={error} />
