@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { accountCommand } from "./commands/account.ts";
 import { authCommand, statusCommand } from "./commands/auth.ts";
 import { migrateCommand } from "./commands/migrate.ts";
 import { grantCommand, initCommand, inviteCommand, revokeCommand } from "./commands/project.ts";
@@ -8,8 +9,14 @@ import { hookEnvCommand, shellCommand, watchCommand } from "./commands/shell.ts"
 const USAGE = `usage: noenv <command>
 
   shell zsh|bash             print the shell hook for your shell profile
-  auth                       sign in to the deployment in NOENV_URL
-  status                     show the deployment, user, and project
+  account add NAME URL [PREFIX...]
+                             add an account, such as work or personal; repos
+                             under a PREFIX (github.com/acme) use it
+  account list               list accounts, * marks the default
+  account default NAME       use NAME where no prefix matches
+  account remove NAME        forget an account
+  auth [NAME]                sign in to an account (default: the one for this repo)
+  status                     show the account, user, and project
   init                       create the project and environment for this repository
   secret set KEY             save a secret (the value is read without echo)
   secret list                list secrets in this environment
@@ -22,6 +29,7 @@ const USAGE = `usage: noenv <command>
 `;
 
 const commands: Record<string, (args: string[]) => Promise<void>> = {
+  account: accountCommand,
   shell: shellCommand,
   "hook-env": hookEnvCommand,
   watch: watchCommand,

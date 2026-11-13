@@ -82,12 +82,12 @@ async function gitRepo(origin: string, files: Record<string, string> = {}): Prom
   return root;
 }
 
-function input(overrides: Partial<HookInput>): HookInput {
+function input({ deployment: target = deployment, ...overrides }: Partial<HookInput> & { deployment?: Deployment }): HookInput {
   return {
     cwd: repo,
     env: {},
     state: "",
-    deployment,
+    resolveDeployment: async () => target,
     startPoller: () => assert.fail("unexpected sign-in"),
     startWatcher: () => {},
     openBrowser: () => assert.fail("unexpected browser"),
@@ -253,4 +253,17 @@ test("a change made elsewhere loads after the watcher sees the new revision", as
   assert.equal(await checkForUpdates(deployment), true);
   const next = await hookEnv(input({ cwd: root, state }));
   assert.equal(bash(`${entered.lines.join("\n")}\n${next.lines.join("\n")}\nprintf '%s' "$SHARED"`), "v2");
+});
+
+test("switching to a repo of another account restores the first account's values", async () => {
+  const other = await deploymentIn(await mkdtemp(join(tmpdir(), "noenv-config-")));
+  const otherAccount = { ...other, url: "https://noenv.other.test" };
+  await signIn(otherAccount, "invalid-token");
+
+  const entered = await hookEnv(input({}));
+  const state = bash(`${entered.lines.join("\n")}\nprintf '%s' "$_NOENV_STATE"`);
+  const switched = await hookEnv(input({ state, deployment: otherAccount }));
+
+  assert.ok(switched.lines.includes("unset API_KEY"));
+  assert.equal(stateOf(switched.lines).url, "https://noenv.other.test");
 });

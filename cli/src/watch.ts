@@ -41,7 +41,7 @@ export async function watchEnvironment(deployment: Deployment, repo: string, env
 
 export async function startWatcher(deployment: Deployment): Promise<void> {
   if (await isWatcherRunning(deployment)) return;
-  spawn(process.execPath, [...process.execArgv, process.argv[1]!, "watch"], { detached: true, stdio: "ignore" }).unref();
+  spawn(process.execPath, [...process.execArgv, process.argv[1]!, "watch", deployment.url], { detached: true, stdio: "ignore" }).unref();
 }
 
 export async function runWatcher(deployment: Deployment): Promise<void> {

@@ -40,7 +40,7 @@ export async function clearSession(deployment: Deployment): Promise<void> {
 export async function requireSession(deployment: Deployment): Promise<string> {
   const token = await loadSession(deployment);
   if (!token) {
-    throw new Error("you are not signed in, open a new shell or run `noenv auth`");
+    throw new Error(`you are not signed in to ${deployment.account ?? deployment.url}, open a new shell or run \`noenv auth${deployment.account ? ` ${deployment.account}` : ""}\``);
   }
   return token;
 }
@@ -102,8 +102,8 @@ export function openBrowser(url: string): void {
   spawn(command, [url], { detached: true, stdio: "ignore" }).on("error", () => {}).unref();
 }
 
-export function startBackgroundPoller(): void {
-  spawn(process.execPath, [...process.execArgv, process.argv[1], "auth", "--wait"], {
+export function startBackgroundPoller(deployment: Deployment): void {
+  spawn(process.execPath, [...process.execArgv, process.argv[1], "auth", "--wait", deployment.url], {
     detached: true,
     stdio: "ignore",
   }).unref();

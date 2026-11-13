@@ -11,6 +11,7 @@ import { findTarget, type Target } from "./target.ts";
 import { markerPath, readMarker, watchEnvironment, writeMarker } from "./watch.ts";
 
 type LoadedState = {
+  url?: string;
   repo: string;
   environment: string;
   previous: Record<string, string | null>;
@@ -23,10 +24,15 @@ export type HookInput = {
   cwd: string;
   env: NodeJS.ProcessEnv;
   state: string;
-  deployment: Deployment | null;
-  startPoller: () => void;
-  startWatcher: () => void;
+  resolveDeployment: (repo: string) => Promise<Deployment | null>;
+  startPoller: (deployment: Deployment) => void;
+  startWatcher: (deployment: Deployment) => void;
   openBrowser: (url: string) => void;
+};
+
+type Resolved = {
+  target: Target;
+  deployment: Deployment;
 };
 
 export type HookOutput = {
@@ -37,55 +43,55 @@ export type HookOutput = {
 export async function hookEnv(input: HookInput): Promise<HookOutput> {
   const state = decodeState(input.state);
   const messages: string[] = [];
-  const target = input.deployment ? await findTargetOrReport(input, messages) : null;
+  const resolved = await resolve(input, messages);
 
-  if (state && target && !state.retry && sameTarget(state, target) && (await isCurrent(input, state))) {
+  if (state && resolved && !state.retry && sameTarget(state, resolved) && (await isCurrent(resolved.deployment, state))) {
     return { lines: [], messages };
   }
 
   const lines = state ? restoreLines(state) : [];
-  if (!target) {
+  if (!resolved) {
     if (state) lines.push(...["_NOENV_STATE", "_NOENV_RETRY", "_NOENV_REV_FILE", "_NOENV_REV"].map(unsetLine));
     return { lines, messages };
   }
 
-  const loaded = await load(input as HookInput & { deployment: Deployment }, target, state, messages);
+  const loaded = await load(input, resolved, state, messages);
   lines.push(
     ...loaded.lines,
     setLine("_NOENV_STATE", encodeState(loaded.state)),
     loaded.state.retry ? setLine("_NOENV_RETRY", "1") : unsetLine("_NOENV_RETRY"),
-    ...revisionLines(input, target, loaded.state.revision),
+    ...revisionLines(resolved, loaded.state.revision),
   );
   return { lines, messages };
 }
 
-function sameTarget(state: LoadedState, target: Target): boolean {
-  return state.repo === target.repo && state.environment === target.environment;
+function sameTarget(state: LoadedState, { target, deployment }: Resolved): boolean {
+  return state.url === deployment.url && state.repo === target.repo && state.environment === target.environment;
 }
 
-async function isCurrent(input: HookInput, state: LoadedState): Promise<boolean> {
-  if (state.revision === undefined || !input.deployment) return true;
-  return (await readMarker(markerPath(input.deployment, state.repo, state.environment))) === String(state.revision);
+async function isCurrent(deployment: Deployment, state: LoadedState): Promise<boolean> {
+  if (state.revision === undefined) return true;
+  return (await readMarker(markerPath(deployment, state.repo, state.environment))) === String(state.revision);
 }
 
-function revisionLines(input: HookInput, target: Target, revision: number | undefined): string[] {
-  if (revision === undefined || !input.deployment) return [unsetLine("_NOENV_REV_FILE"), unsetLine("_NOENV_REV")];
-  return [setLine("_NOENV_REV_FILE", markerPath(input.deployment, target.repo, target.environment)), setLine("_NOENV_REV", String(revision))];
+function revisionLines({ target, deployment }: Resolved, revision: number | undefined): string[] {
+  if (revision === undefined) return [unsetLine("_NOENV_REV_FILE"), unsetLine("_NOENV_REV")];
+  return [setLine("_NOENV_REV_FILE", markerPath(deployment, target.repo, target.environment)), setLine("_NOENV_REV", String(revision))];
 }
 
 async function load(
-  input: HookInput & { deployment: Deployment },
-  target: Target,
+  input: HookInput,
+  resolved: Resolved,
   state: LoadedState | null,
   messages: string[],
 ): Promise<{ lines: string[]; state: LoadedState }> {
-  const { deployment } = input;
-  const empty: LoadedState = { repo: target.repo, environment: target.environment, previous: {}, retry: false };
+  const { target, deployment } = resolved;
+  const empty: LoadedState = { url: deployment.url, repo: target.repo, environment: target.environment, previous: {}, retry: false };
 
   try {
     const token = await loadSession(deployment);
     if (!token) {
-      return { lines: [], state: await signIn(input, empty, state, messages) };
+      return { lines: [], state: await signIn(input, deployment, empty, state, messages) };
     }
 
     const identity = (await loadIdentity(deployment)) ?? (await ensureIdentity(deployment, token));
@@ -106,7 +112,7 @@ async function load(
       lines.push(exportLine(name, value));
     }
 
-    const reloaded = state !== null && sameTarget(state, target) && state.revision !== undefined;
+    const reloaded = state !== null && sameTarget(state, resolved) && state.revision !== undefined;
     messages.push(`${reloaded ? "updated" : "loaded"} ${lines.length} secrets for ${target.repo} (${target.environment})`);
     const missing = target.requiredSecrets.filter((name) => !(name in bundle.secrets));
     if (missing.length > 0) {
@@ -114,7 +120,7 @@ async function load(
     }
     await writeMarker(markerPath(deployment, target.repo, target.environment), String(bundle.revision));
     await watchEnvironment(deployment, target.repo, target.environment);
-    input.startWatcher();
+    input.startWatcher(deployment);
     return { lines, state: { ...empty, previous, revision: bundle.revision } };
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
@@ -156,31 +162,35 @@ async function enforceDotenv(loaded: Loaded, messages: string[]): Promise<{ bloc
 }
 
 async function signIn(
-  input: HookInput & { deployment: Deployment },
+  input: HookInput,
+  deployment: Deployment,
   empty: LoadedState,
   state: LoadedState | null,
   messages: string[],
 ): Promise<LoadedState> {
-  const waiting = await readPendingSignIn(input.deployment);
+  const waiting = await readPendingSignIn(deployment);
   if (state?.notified && !(waiting && waiting.expiresAt > Date.now())) {
     messages.push("sign-in was not completed, run `noenv auth` to try again");
     return empty;
   }
 
-  const { pending, started } = await startSignIn(input.deployment);
+  const { pending, started } = await startSignIn(deployment);
   if (started) {
-    input.startPoller();
+    input.startPoller(deployment);
     input.openBrowser(pending.url);
   }
   if (started || state?.notified !== pending.userCode) {
-    messages.push(`sign in to load secrets: open ${pending.url} and confirm the code ${pending.userCode}`);
+    const account = deployment.account ? ` to ${deployment.account}` : "";
+    messages.push(`sign in${account} to load secrets: open ${pending.url} and confirm the code ${pending.userCode}`);
   }
   return { ...empty, retry: true, notified: pending.userCode };
 }
 
-async function findTargetOrReport(input: HookInput, messages: string[]): Promise<Target | null> {
+async function resolve(input: HookInput, messages: string[]): Promise<Resolved | null> {
   try {
-    return await findTarget(input.cwd, input.env);
+    const target = await findTarget(input.cwd, input.env);
+    const deployment = target && (await input.resolveDeployment(target.repo));
+    return target && deployment ? { target, deployment } : null;
   } catch (error) {
     messages.push(describe(error));
     return null;

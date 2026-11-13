@@ -88,6 +88,26 @@ Set the environment with `environment = "staging"` in a `.noenv` file in the rep
 
 The dashboard does the rest: projects, secrets and history, team invites, policies, and devices.
 
+## Multiple accounts
+
+Each noenv deployment is one team. If you work with more than one team, for example your company, a client, and your own projects, add each deployment as a named account:
+
+```sh
+noenv account add personal https://noenv.me.dev
+noenv account add acme https://noenv.acme.com github.com/acme
+noenv account add globex https://secrets.globex.io gitlab.globex.io/globex github.com/globex
+noenv auth acme             # sign in to each account once
+```
+
+The CLI picks the account for each repository in this order:
+
+1. `NOENV_ACCOUNT=acme` in the shell.
+2. The longest repository prefix that matches the git `origin`. `github.com/acme` matches `github.com/acme/backend` but not `github.com/acmecorp/backend`.
+3. The default account. The first account you add is the default. Change it with `noenv account default NAME`.
+4. `NOENV_URL`, so a setup with one deployment works without accounts.
+
+When you `cd` from a repository of one account to a repository of another, noenv unloads the first set of secrets and loads the second. `noenv account list` shows each account and whether you are signed in.
+
 ## Team
 
 1. Invite people from **Team** or from a project's **Members** card. You get a link to send them.
