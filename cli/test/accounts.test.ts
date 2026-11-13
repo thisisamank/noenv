@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { accountName } from "../src/commands/account.ts";
 import { resolveDeployment, writeAccounts, type Accounts } from "../src/deployment.ts";
 
 const accounts: Accounts = {
@@ -47,4 +48,12 @@ test("without a deployment in .noenv: NOENV_ACCOUNT, then the default, then NOEN
 
   const empty = { NOENV_CONFIG_DIR: await mkdtemp(join(tmpdir(), "noenv-accounts-")), NOENV_URL: "https://legacy.test" };
   assert.equal((await resolveDeployment(undefined, empty))?.url, "https://legacy.test");
+});
+
+test("a team name from the deployment becomes a valid account name", () => {
+  assert.equal(accountName("Acme Corp"), "acme-corp");
+  assert.equal(accountName("  Café Ünïcode!! "), "cafe-unicode");
+  assert.equal(accountName("thisisamank"), "thisisamank");
+  assert.equal(accountName("$(rm -rf ~)"), "rm-rf");
+  assert.equal(accountName("!!!"), "");
 });

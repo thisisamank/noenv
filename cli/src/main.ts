@@ -11,7 +11,8 @@ import { hookEnvCommand, refreshCommand, shellCommand, watchCommand } from "./co
 const USAGE = `usage: noenv <command>
 
   shell zsh|bash             print the shell hook for your shell profile
-  account add NAME URL       add an account, such as work or personal
+  account add URL [NAME]     add a deployment as an account; NAME defaults to the
+                             team name that the deployment reports
   account list               list accounts, * marks the default
   account default NAME       use NAME in repositories whose .noenv names no account
   account remove NAME        forget an account

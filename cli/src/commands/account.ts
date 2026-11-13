@@ -1,8 +1,9 @@
 import { IDENTIFIER } from "@noenv/config/names";
-import { deploymentAt, readAccounts, writeAccounts } from "../deployment.ts";
+import { api } from "../api.ts";
+import { deploymentAt, readAccounts, writeAccounts, type Deployment } from "../deployment.ts";
 import { loadSession } from "../session.ts";
 
-const USAGE = "usage: noenv account add NAME URL | list | default NAME | remove NAME";
+const USAGE = "usage: noenv account add URL [NAME] | list | default NAME | remove NAME";
 
 export async function accountCommand([action, ...args]: string[]): Promise<void> {
   const handlers: Record<string, (args: string[]) => Promise<void>> = {
@@ -16,17 +17,21 @@ export async function accountCommand([action, ...args]: string[]): Promise<void>
   await handler(args);
 }
 
-async function addAccount([name, url, ...extra]: string[]): Promise<void> {
-  if (!name || !url) throw new Error(USAGE);
-  if (extra.length > 0) {
-    throw new Error("repository prefixes are no longer used, `noenv init` saves the deployment in the .noenv file of each repository");
-  }
-  if (!IDENTIFIER.test(name)) throw new Error('the account name must contain only letters, digits, "_" or "-"');
+async function addAccount(args: string[]): Promise<void> {
+  if (args.length === 0 || args.length > 2) throw new Error(USAGE);
+  const [url, chosen] = isUrl(args[0]!) ? [args[0]!, args[1]] : [args[1], args[0]];
+  if (!url || !isUrl(url)) throw new Error(USAGE);
   const deployment = deploymentAt(url);
+  const name = chosen ?? (await teamName(deployment));
+  if (!IDENTIFIER.test(name)) throw new Error('the account name must contain only letters, digits, "_" or "-"');
 
   const accounts = await readAccounts();
-  const clash = Object.entries(accounts.accounts).find(([other, account]) => other !== name && deploymentAt(account.url).url === deployment.url);
-  if (clash) throw new Error(`the account "${clash[0]}" already uses ${deployment.url}`);
+  const same = Object.entries(accounts.accounts).find(([, account]) => deploymentAt(account.url).url === deployment.url);
+  if (same && same[0] !== name) throw new Error(`${deployment.url} is already the account "${same[0]}"`);
+  const taken = accounts.accounts[name];
+  if (taken && deploymentAt(taken.url).url !== deployment.url) {
+    throw new Error(`the name "${name}" is already used for ${taken.url}, choose another: \`noenv account add ${deployment.url} NAME\``);
+  }
 
   accounts.accounts[name] = { url: deployment.url };
   accounts.default ??= name;
@@ -39,7 +44,7 @@ async function listAccounts(): Promise<void> {
   const accounts = await readAccounts();
   const entries = Object.entries(accounts.accounts);
   if (entries.length === 0) {
-    console.log("No accounts. Add one with `noenv account add NAME URL`");
+    console.log("No accounts. Add one with `noenv account add URL`");
     return;
   }
   for (const [name, account] of entries) {
@@ -64,4 +69,19 @@ async function removeAccount([name]: string[]): Promise<void> {
   if (accounts.default === name) delete accounts.default;
   await writeAccounts(accounts);
   console.log(`Removed account ${name}. Its key stays on this machine, so adding it again keeps your access.`);
+}
+
+export function accountName(teamName: string): string {
+  return teamName.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/-{2,}/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+}
+
+async function teamName(deployment: Deployment): Promise<string> {
+  const reported = await api<{ name?: unknown }>(deployment, "GET", "/v1/deployment").catch(() => null);
+  const name = typeof reported?.name === "string" ? accountName(reported.name) : "";
+  if (!name) throw new Error(`${deployment.url} did not report a team name, choose one: \`noenv account add ${deployment.url} NAME\``);
+  return name;
+}
+
+function isUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value) && URL.canParse(value);
 }
