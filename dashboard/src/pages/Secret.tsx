@@ -140,7 +140,7 @@ function ValueForm({
             <Icon name="lock" />
             Encrypted in your browser
           </span>
-          <button className="btn primary" disabled={busy || !canWrite}>
+          <button className="btn primary" disabled={busy || !canWrite || !value || (!name && !newName.trim())} aria-busy={busy}>
             {name ? `Save as v${nextVersion}` : "Save"}
           </button>
         </div>

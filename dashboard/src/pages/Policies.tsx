@@ -113,6 +113,12 @@ function ScopeForm({
   const [minRole, setMinRole] = useState<Role>(effective.environmentMinRole);
   const [busy, setBusy] = useState(false);
 
+  const dirty =
+    mode !== effective.dotenv.mode ||
+    minRole !== effective.environmentMinRole ||
+    JSON.stringify(include) !== JSON.stringify(effective.dotenv.include) ||
+    JSON.stringify(exclude) !== JSON.stringify(effective.dotenv.exclude);
+
   async function save(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
@@ -186,7 +192,7 @@ function ScopeForm({
           <button type="button" className="btn" onClick={reset} disabled={busy}>
             Reset
           </button>
-          <button className={`btn ${mode === "delete" ? "danger" : "primary"}`} disabled={busy}>
+          <button className={`btn ${mode === "delete" ? "danger" : "primary"}`} disabled={busy || !dirty} aria-busy={busy}>
             Save
           </button>
         </div>
@@ -248,6 +254,10 @@ function OrganizationSettings({ layer, canEdit, onSaved }: { layer: Layer; canEd
     setSessionTtlHours(layer.sessionTtlHours ?? DEFAULT_POLICIES.sessionTtlHours);
   }, [layer]);
 
+  const dirty =
+    minCliVersion !== (layer.minCliVersion ?? "") ||
+    sessionTtlHours !== (layer.sessionTtlHours ?? DEFAULT_POLICIES.sessionTtlHours);
+
   async function save(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
@@ -285,7 +295,7 @@ function OrganizationSettings({ layer, canEdit, onSaved }: { layer: Layer; canEd
         </fieldset>
         {canEdit && (
           <div className="settings-foot">
-            <button className="btn primary" disabled={busy}>
+            <button className="btn primary" disabled={busy || !dirty} aria-busy={busy}>
               Save
             </button>
           </div>
