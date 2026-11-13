@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.3.0 — 2026-11-13
+
+Each repository's `.noenv` file names its deployment, and every teammate gets the same account name from the deployment. noenv no longer guesses the account from the git `origin`.
+
+### Added
+
+- `noenv account add URL` asks the deployment for its team name and saves the account under it. Admins set the name with `TEAM_NAME` at deploy time. Without it, the name comes from the Worker's address. `noenv account add URL NAME` still sets your own name.
+
+### Changed
+
+- `noenv init` saves the deployment URL in `.noenv` as `deployment = "URL"`. With one account, it uses that account. With more than one, it shows a list. Agents and scripts pass `noenv init --account NAME`. In a repository with a `.noenv` file but no deployment, `init` adds the line.
+- The shell hook, `noenv exec`, and all other commands use the local account whose URL matches `.noenv`, whatever its name. Teammates can name the account differently.
+- If no local account has the URL in `.noenv`, noenv prints the command to add it. It never connects to that URL on its own.
+- In a repository whose `.noenv` names no deployment, noenv uses `NOENV_ACCOUNT`, then the default account, then `NOENV_URL`.
+
+### Removed
+
+- Repository prefixes. `noenv account add` no longer takes them, and noenv ignores the prefixes saved by 0.2.x. Run `noenv init` in each repository to save its deployment.
+
 ## 0.2.1 — 2026-11-13
 
 The shell signs you in on its own again, instead of asking you to run `noenv auth`.
