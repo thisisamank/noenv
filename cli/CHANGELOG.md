@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.1 — 2026-11-13
+
+The shell signs you in on its own again, instead of asking you to run `noenv auth`.
+
+### Fixed
+
+- The background sign-in keeps waiting through network errors, server errors, and rate limits. Before, a Wi-Fi drop or a laptop waking from sleep stopped it, and the shell asked you to run `noenv auth`.
+- When a sign-in is pending but the process that waits for it has stopped, the shell starts a new one.
+- After a sign-in fails or its code expires, entering the repository again starts a new sign-in.
+
 ## 0.2.0 — 2026-11-13
 
 Coding agents and CI get their secrets with one command, secrets push to Cloudflare Workers, one CLI works with several teams, and `cd` is fast again.
