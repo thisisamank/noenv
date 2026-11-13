@@ -68,7 +68,7 @@ Open a new terminal and `cd` into a repo. Your browser opens once so you can app
 
 ```sh
 cd ~/code/backend
-noenv init                  # creates the project and a development environment
+noenv init                  # creates the project, a development environment, and .noenv
 noenv secret set API_KEY    # prompts for the value and keeps it off screen
 ```
 
@@ -82,11 +82,33 @@ noenv secret set API_KEY    # prompts for the value and keeps it off screen
 | `noenv secret history KEY` | List the versions of a secret |
 | `noenv secret rollback KEY VERSION` | Restore an older version |
 | `noenv migrate` | Move this repo's `.env` files into noenv |
+| `noenv exec -- CMD` | Run a command with this repo's secrets, without the shell hook |
 | `noenv grant EMAIL ROLE` | Give someone access to this project and share the key |
 
 Set the environment with `environment = "staging"` in a `.noenv` file in the repo, or with `NOENV_ENVIRONMENT=staging` for one shell.
 
 The dashboard does the rest: projects, secrets and history, team invites, policies, and devices.
+
+Commit the `.noenv` file that `noenv init` creates. It tells teammates' shells that the repo uses noenv, so access problems show up as messages instead of silence.
+
+## Agents, scripts, and CI
+
+Coding agents run each command in a fresh shell, so the `cd` hook does not run for them. Tell them to use `noenv exec`:
+
+```sh
+noenv exec -- npm run dev
+noenv exec -- npx wrangler deploy
+```
+
+`noenv exec` finds the repository from the current directory, picks the account for it (see [Multiple accounts](#multiple-accounts)), loads the secrets, and runs the command. When the agent moves to another repository, the next `exec` uses that repository's account and secrets. It removes secrets that your shell loaded for a different repository first, so values do not leak from one project into another. It prints which project it loaded, never the values. Outside a noenv project it runs the command without secrets.
+
+To save a secret without a prompt, pipe the value: `printf '%s' "$VALUE" | noenv secret set KEY`.
+
+Add a line like this to your agent instructions (`CLAUDE.md`, `AGENTS.md`):
+
+```md
+Run commands that need environment variables with `noenv exec -- <command>`. Do not create .env files.
+```
 
 ## Multiple accounts
 
@@ -132,6 +154,7 @@ The `EMAIL` binding is already in `wrangler.jsonc`. When email is on, the first 
 - Each member gets the environment's private key wrapped for their own key, which lives in `~/.config/noenv`.
 - The Worker checks who you are and what role you have before it returns anything. It never sees a plaintext value.
 - The newest values come from KV in one read. D1 holds every version, the permissions, and the policies.
+- The CLI keeps the last encrypted bundle of each environment in `~/.config/noenv`. A `cd` decrypts it locally and makes no network request. A background refresh fetches the newest bundle, and the shell loads it when it arrives. zsh prints the result as soon as it lands. bash prints it at the next prompt.
 
 It protects against secrets leaking through `.env` files, chat, and repositories. It does not stop someone with access from reading the variables in their own shell.
 
