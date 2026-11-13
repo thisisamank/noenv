@@ -9,6 +9,7 @@ export type WranglerConfig = {
 };
 
 export type ProjectConfig = {
+  deployment?: string;
   environment: string;
   requiredSecrets: string[];
   wrangler: WranglerConfig;
@@ -38,7 +39,17 @@ export function parseConfig(text: string): ProjectConfig {
     throw new ConfigError("secrets.required must be a list of valid variable names");
   }
 
-  return { environment, requiredSecrets: required, wrangler: parseWrangler(raw.wrangler) };
+  const config: ProjectConfig = { environment, requiredSecrets: required, wrangler: parseWrangler(raw.wrangler) };
+  if (raw.deployment !== undefined) config.deployment = parseDeployment(raw.deployment);
+  return config;
+}
+
+function parseDeployment(value: unknown): string {
+  const url = typeof value === "string" ? URL.parse(value) : null;
+  if (!url || (url.protocol !== "https:" && url.protocol !== "http:")) {
+    throw new ConfigError("deployment must be the http or https URL of a noenv deployment");
+  }
+  return url.origin;
 }
 
 function parseWrangler(value: unknown): WranglerConfig {

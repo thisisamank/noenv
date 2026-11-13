@@ -8,6 +8,7 @@ import { ConfigError, findProject, normalizeRemoteUrl, parseConfig } from "@noen
 
 const VALID = `
 version = 1
+deployment = "https://noenv.acme.com/"
 environment = "staging"
 
 [secrets]
@@ -21,6 +22,7 @@ env = "staging"
 
 test("parses a valid config", () => {
   assert.deepEqual(parseConfig(VALID), {
+    deployment: "https://noenv.acme.com",
     environment: "staging",
     requiredSecrets: ["DATABASE_URL", "API_KEY"],
     wrangler: { secrets: ["API_KEY"], environment: "production", env: "staging" },
@@ -36,6 +38,8 @@ test("rejects values that are unsafe for a shell", () => {
   assert.throws(() => parseConfig(VALID.replace('environment = "staging"', 'environment = "dev; echo"')), ConfigError);
   assert.throws(() => parseConfig(VALID.replace('secrets = ["API_KEY"]', 'secrets = ["$(id)"]')), ConfigError);
   assert.throws(() => parseConfig(VALID.replace('env = "staging"', 'env = "x --config /tmp/evil"')), ConfigError);
+  assert.throws(() => parseConfig(VALID.replace("https://noenv.acme.com/", "file:///etc/passwd")), ConfigError);
+  assert.throws(() => parseConfig(VALID.replace('"https://noenv.acme.com/"', "42")), ConfigError);
 });
 
 test("rejects an unknown version", () => {
@@ -74,6 +78,7 @@ test("finds the project from a subdirectory of a git repository", async () => {
     root,
     repo: "github.com/acme/backend",
     hasConfig: true,
+    deployment: "https://noenv.acme.com",
     environment: "staging",
     requiredSecrets: ["DATABASE_URL", "API_KEY"],
     wrangler: { secrets: ["API_KEY"], environment: "production", env: "staging" },
