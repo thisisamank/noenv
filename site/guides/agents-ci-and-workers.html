@@ -78,7 +78,6 @@
       </aside>
       <article class="prose">
 
-<div class="note"><svg class="icon"><use href="/icons.svg#info"/></svg><div>These commands come in the next CLI release. They are in the repository now.</div></div>
 
 <h2 id="why">Why agents need their own command</h2>
 <p>Coding agents such as Claude Code and Codex run each command in a fresh shell. The <code>cd</code> hook never runs for them, so the secrets never load. <code>noenv exec</code> loads them for one command.</p>
