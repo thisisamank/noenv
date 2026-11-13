@@ -13,7 +13,8 @@
     "typecheck": "tsc && tsc -p worker && tsc -p cli && tsc -p dashboard",
     "build": "npm run build -w @noenv/dashboard",
     "deploy": "wrangler d1 migrations apply DB --remote && wrangler deploy",
-    "setup": "node scripts/setup.ts"
+    "setup": "node scripts/setup.ts",
+    "deploy:production": "npm run build && wrangler d1 migrations apply DB --remote --config wrangler.production.jsonc && wrangler deploy --config wrangler.production.jsonc"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
