@@ -2,14 +2,22 @@ import { parse } from "smol-toml";
 import { ConfigError } from "./errors.ts";
 import { ENV_VAR_NAME, IDENTIFIER } from "./names.ts";
 
+export type WranglerConfig = {
+  secrets: string[];
+  environment?: string;
+  env?: string;
+};
+
 export type ProjectConfig = {
   environment: string;
   requiredSecrets: string[];
+  wrangler: WranglerConfig;
 };
 
 export const DEFAULT_CONFIG: ProjectConfig = {
   environment: "development",
   requiredSecrets: [],
+  wrangler: { secrets: [] },
 };
 
 export function parseConfig(text: string): ProjectConfig {
@@ -30,7 +38,25 @@ export function parseConfig(text: string): ProjectConfig {
     throw new ConfigError("secrets.required must be a list of valid variable names");
   }
 
-  return { environment, requiredSecrets: required };
+  return { environment, requiredSecrets: required, wrangler: parseWrangler(raw.wrangler) };
+}
+
+function parseWrangler(value: unknown): WranglerConfig {
+  const raw = (value ?? {}) as Record<string, unknown>;
+  const secrets = raw.secrets ?? [];
+  if (!Array.isArray(secrets) || !secrets.every(isEnvVarName)) {
+    throw new ConfigError("wrangler.secrets must be a list of valid variable names");
+  }
+  const config: WranglerConfig = { secrets };
+  for (const key of ["environment", "env"] as const) {
+    const field = raw[key];
+    if (field === undefined) continue;
+    if (typeof field !== "string" || !IDENTIFIER.test(field)) {
+      throw new ConfigError(`wrangler.${key} must contain only letters, digits, "_" or "-"`);
+    }
+    config[key] = field;
+  }
+  return config;
 }
 
 function isEnvVarName(value: unknown): value is string {

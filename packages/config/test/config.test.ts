@@ -12,22 +12,30 @@ environment = "staging"
 
 [secrets]
 required = ["DATABASE_URL", "API_KEY"]
+
+[wrangler]
+secrets = ["API_KEY"]
+environment = "production"
+env = "staging"
 `;
 
 test("parses a valid config", () => {
   assert.deepEqual(parseConfig(VALID), {
     environment: "staging",
     requiredSecrets: ["DATABASE_URL", "API_KEY"],
+    wrangler: { secrets: ["API_KEY"], environment: "production", env: "staging" },
   });
 });
 
 test("defaults the environment to development", () => {
-  assert.deepEqual(parseConfig("version = 1"), { environment: "development", requiredSecrets: [] });
+  assert.deepEqual(parseConfig("version = 1"), { environment: "development", requiredSecrets: [], wrangler: { secrets: [] } });
 });
 
 test("rejects values that are unsafe for a shell", () => {
   assert.throws(() => parseConfig(VALID.replace("API_KEY", "$(rm -rf ~)")), ConfigError);
-  assert.throws(() => parseConfig(VALID.replace("staging", "dev; echo")), ConfigError);
+  assert.throws(() => parseConfig(VALID.replace('environment = "staging"', 'environment = "dev; echo"')), ConfigError);
+  assert.throws(() => parseConfig(VALID.replace('secrets = ["API_KEY"]', 'secrets = ["$(id)"]')), ConfigError);
+  assert.throws(() => parseConfig(VALID.replace('env = "staging"', 'env = "x --config /tmp/evil"')), ConfigError);
 });
 
 test("rejects an unknown version", () => {
@@ -68,6 +76,7 @@ test("finds the project from a subdirectory of a git repository", async () => {
     hasConfig: true,
     environment: "staging",
     requiredSecrets: ["DATABASE_URL", "API_KEY"],
+    wrangler: { secrets: ["API_KEY"], environment: "production", env: "staging" },
   });
 });
 
