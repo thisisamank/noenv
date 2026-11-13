@@ -9,7 +9,11 @@ export default defineConfig({
   build: { outDir: "dist/dashboard", emptyOutDir: true },
   server: {
     proxy: {
-      "/v1": worker,
+      "/v1": {
+        target: worker,
+        changeOrigin: true,
+        configure: (proxy) => proxy.on("proxyReq", (request) => request.setHeader("Origin", worker)),
+      },
     },
   },
 });
