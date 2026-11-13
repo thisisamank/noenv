@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>noenv changelog</title>
+  <link href="https://noenv.thisisamank.in/changelog"/>
+  <link rel="self" href="https://noenv.thisisamank.in/changelog.xml"/>
+  <id>https://noenv.thisisamank.in/changelog</id>
+  <updated>2026-11-01T00:00:00Z</updated>
+  <entry>
+    <title>CLI on npm, email invites, and a new name</title>
+    <link href="https://noenv.thisisamank.in/changelog#2026-11-01"/>
+    <id>https://noenv.thisisamank.in/changelog#2026-11-01</id>
+    <updated>2026-11-01T00:00:00Z</updated>
+    <content type="html">&lt;p&gt;The product is now noenv, the CLI installs from npm, and invites can go out by email.&lt;/p&gt;&lt;h3&gt;Added&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;The CLI is on npm as &lt;code&gt;@thisisamank/noenv-cli&lt;/code&gt;. The command stays &lt;code&gt;noenv&lt;/code&gt;.&lt;/li&gt;&lt;li&gt;Invites and the first admin&#x27;s setup link can go out by email through Cloudflare Email Sending. Set &lt;code&gt;EMAIL_FROM&lt;/code&gt; to turn it on.&lt;/li&gt;&lt;li&gt;This website, with the 40-second tour.&lt;/li&gt;&lt;/ul&gt;&lt;h3&gt;Changed&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;nenv is now noenv. The old website address redirects to the new one.&lt;/li&gt;&lt;li&gt;The Deploy button no longer asks for an email sender. Keep &lt;code&gt;EMAIL_FROM&lt;/code&gt; as &lt;code&gt;none&lt;/code&gt; to send invite links yourself.&lt;/li&gt;&lt;li&gt;Polished the dashboard and the page the Worker serves.&lt;/li&gt;&lt;/ul&gt;</content>
+  </entry>
+  <entry>
+    <title>First release</title>
+    <link href="https://noenv.thisisamank.in/changelog#2026-10-31"/>
+    <id>https://noenv.thisisamank.in/changelog#2026-10-31</id>
+    <updated>2026-10-31T00:00:00Z</updated>
+    <content type="html">&lt;p&gt;Encrypted environment variables that load when you cd into a repository, on your own Cloudflare account.&lt;/p&gt;&lt;h3&gt;Added&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;Secrets load when you &lt;code&gt;cd&lt;/code&gt; into a git repository and unload when you leave. zsh and bash.&lt;/li&gt;&lt;li&gt;Values are encrypted on your machine. The Worker stores only ciphertext.&lt;/li&gt;&lt;li&gt;Every change is a new version, with history and rollback.&lt;/li&gt;&lt;li&gt;Sign-in with passkeys. Roles: reader, editor, and admin.&lt;/li&gt;&lt;li&gt;&lt;code&gt;noenv migrate&lt;/code&gt; moves &lt;code&gt;.env&lt;/code&gt; files in and verifies every value.&lt;/li&gt;&lt;li&gt;.env policies (warn, block, migrate, delete), minimum CLI version, and session expiry.&lt;/li&gt;&lt;li&gt;The dashboard: projects, secrets, team, policies, and devices.&lt;/li&gt;&lt;li&gt;One-click Deploy to Cloudflare.&lt;/li&gt;&lt;/ul&gt;&lt;h3&gt;Fixed&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;The Deploy button build failed on an old package name in the lock file.&lt;/li&gt;&lt;/ul&gt;</content>
+  </entry>
+</feed>
