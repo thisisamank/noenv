@@ -29,6 +29,7 @@ export type HookInput = {
   state: string;
   resolveDeployment: (repo: string) => Promise<Deployment | null>;
   startPoller: (deployment: Deployment) => void;
+  pollerRunning: (deployment: Deployment) => Promise<boolean>;
   startWatcher: (deployment: Deployment) => void;
   openBrowser: (url: string) => void;
 };
@@ -87,7 +88,7 @@ async function load(input: HookInput, resolved: Resolved, state: LoadedState | n
   const restore = state ? restoreLines(state) : [];
 
   if (!(await loadSession(deployment))) {
-    return { lines: restore, state: await signIn(input, deployment, empty, state, messages), refresh: false };
+    return { lines: restore, state: await signIn(input, deployment, empty, state, entering, messages), refresh: false };
   }
 
   const entry = await readCache(deployment, target);
@@ -156,20 +157,19 @@ async function signIn(
   deployment: Deployment,
   empty: LoadedState,
   state: LoadedState | null,
+  entering: boolean,
   messages: string[],
 ): Promise<LoadedState> {
   const waiting = await readPendingSignIn(deployment);
-  if (state?.notified && !(waiting && waiting.expiresAt > Date.now())) {
-    messages.push("sign-in was not completed, run `noenv auth` to try again");
+  if (state?.notified && !entering && !(waiting && waiting.expiresAt > Date.now())) {
+    messages.push("sign-in was not completed, enter the repository again or run `noenv auth` to retry");
     return empty;
   }
 
   try {
     const { pending, started } = await startSignIn(deployment);
-    if (started) {
-      input.startPoller(deployment);
-      input.openBrowser(pending.url);
-    }
+    if (started) input.openBrowser(pending.url);
+    if (started || !(await input.pollerRunning(deployment))) input.startPoller(deployment);
     if (started || state?.notified !== pending.userCode) {
       const account = deployment.account ? ` to ${deployment.account}` : "";
       messages.push(`sign in${account} to load secrets: open ${pending.url} and confirm the code ${pending.userCode}`);

@@ -75,6 +75,27 @@ export async function startSignIn(deployment: Deployment): Promise<{ pending: Pe
 }
 
 export async function waitForSignIn(deployment: Deployment, pending: PendingSignIn): Promise<boolean> {
+  await writeJsonFile(pollerPath(deployment), { pid: process.pid });
+  try {
+    return await poll(deployment, pending);
+  } finally {
+    const poller = await readJsonFile<{ pid: number }>(pollerPath(deployment));
+    if (poller?.pid === process.pid) await removeFile(pollerPath(deployment));
+  }
+}
+
+export async function pollerRunning(deployment: Deployment): Promise<boolean> {
+  const poller = await readJsonFile<{ pid: number }>(pollerPath(deployment));
+  if (!poller) return false;
+  try {
+    process.kill(poller.pid, 0);
+    return true;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "EPERM";
+  }
+}
+
+async function poll(deployment: Deployment, pending: PendingSignIn): Promise<boolean> {
   while (pending.expiresAt > Date.now()) {
     await sleep(pending.interval * 1000);
     try {
@@ -86,7 +107,7 @@ export async function waitForSignIn(deployment: Deployment, pending: PendingSign
       await ensureIdentity(deployment, session.token);
       return true;
     } catch (error) {
-      if (!(error instanceof ApiError) || error.message !== "authorization_pending") break;
+      if (!isRetryable(error)) break;
     }
   }
   await removeFile(pendingPath(deployment));
@@ -107,6 +128,15 @@ export function startBackgroundPoller(deployment: Deployment): void {
     detached: true,
     stdio: "ignore",
   }).unref();
+}
+
+function isRetryable(error: unknown): boolean {
+  if (!(error instanceof ApiError)) return true;
+  return error.message === "authorization_pending" || error.status === 429 || error.status >= 500;
+}
+
+function pollerPath(deployment: Deployment): string {
+  return join(deployment.dir, "sign-in-poller.json");
 }
 
 function sessionPath(deployment: Deployment): string {

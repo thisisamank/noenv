@@ -1,7 +1,7 @@
 import { text } from "node:stream/consumers";
 import { deploymentAt, resolveDeployment } from "../deployment.ts";
 import { hookEnv } from "../hook-env.ts";
-import { openBrowser, startBackgroundPoller } from "../session.ts";
+import { openBrowser, pollerRunning, startBackgroundPoller } from "../session.ts";
 import { refresh } from "../refresh.ts";
 import { hookScript, parseShell, quote } from "../shell.ts";
 import { findTarget } from "../target.ts";
@@ -21,6 +21,7 @@ export async function hookEnvCommand([shell]: string[]): Promise<void> {
     state,
     resolveDeployment: (repo) => resolveDeployment(repo),
     startPoller: startBackgroundPoller,
+    pollerRunning,
     startWatcher: (deployment) => void startWatcher(deployment),
     openBrowser,
   });

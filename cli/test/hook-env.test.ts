@@ -2,7 +2,7 @@ import { after, before, test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, realpath, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { exportPublicKey, generateKeyPair, importPublicKey, wrapPrivateKey } from "@noenv/crypto";
@@ -92,6 +92,7 @@ function input({ deployment: target = deployment, ...overrides }: Partial<HookIn
     state: "",
     resolveDeployment: async () => target,
     startPoller: () => assert.fail("unexpected sign-in"),
+    pollerRunning: async () => true,
     startWatcher: () => {},
     openBrowser: () => assert.fail("unexpected browser"),
     ...overrides,
@@ -165,6 +166,36 @@ test("starts one sign-in and does not repeat the message while it is pending", a
   const otherTerminal = await hookEnv(input(hooks));
   assert.equal(pollers, 1);
   assert.match(otherTerminal.messages[0], /sign in to load secrets/);
+});
+
+test("restarts the poller when a sign-in is pending but nothing waits for it", async () => {
+  const signedOut = await deploymentIn(await mkdtemp(join(tmpdir(), "noenv-config-")));
+  let pollers = 0;
+  let browsers = 0;
+  const hooks = { deployment: signedOut, startPoller: () => void pollers++, openBrowser: () => void browsers++ };
+
+  await hookEnv(input(hooks));
+  await hookEnv(input({ ...hooks, pollerRunning: async () => false }));
+  assert.equal(pollers, 2);
+  assert.equal(browsers, 1);
+});
+
+test("a failed sign-in starts again when you enter the repository, not at every prompt", async () => {
+  const signedOut = await deploymentIn(await mkdtemp(join(tmpdir(), "noenv-config-")));
+  let pollers = 0;
+  const hooks = { deployment: signedOut, startPoller: () => void pollers++, openBrowser: () => {} };
+
+  const first = await hookEnv(input(hooks));
+  await rm(join(signedOut.dir, "pending-sign-in.json"));
+  const state = bash(`${first.lines.join("\n")}\nprintf '%s' "$_NOENV_STATE"`);
+
+  const samePrompt = await hookEnv(input({ ...hooks, state }));
+  assert.match(samePrompt.messages[0], /enter the repository again/);
+  assert.equal(pollers, 1);
+
+  const reentered = await hookEnv(input(hooks));
+  assert.match(reentered.messages[0], /sign in to load secrets/);
+  assert.equal(pollers, 2);
 });
 
 test("stays silent in unknown repos and reports access errors in repos with a .noenv file", async () => {
