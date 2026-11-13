@@ -12,7 +12,7 @@ export type Bundle = {
   secrets: Record<string, string>;
 };
 
-type RawBundle = {
+export type RawBundle = {
   projectId: string;
   revision: number;
   policies: Policies;
@@ -21,14 +21,11 @@ type RawBundle = {
   secrets: { name: string; version: number; sealed: Sealed }[];
 };
 
-export async function fetchBundle(
-  deployment: Deployment,
-  token: string,
-  privateKey: CryptoKey,
-  repo: string,
-  environment: string,
-): Promise<Bundle> {
-  const raw = await api<RawBundle>(deployment, "GET", `${environmentPath(repo, environment)}/bundle`, { token });
+export async function fetchRawBundle(deployment: Deployment, token: string, repo: string, environment: string): Promise<RawBundle> {
+  return api<RawBundle>(deployment, "GET", `${environmentPath(repo, environment)}/bundle`, { token });
+}
+
+export async function openBundle(raw: RawBundle, privateKey: CryptoKey, environment: string): Promise<Bundle> {
   const environmentPrivateKey = await unwrapPrivateKey(raw.wrappedKey, privateKey);
 
   const secrets: Record<string, string> = {};
@@ -43,4 +40,14 @@ export async function fetchBundle(
     environmentPrivateKey,
     secrets,
   };
+}
+
+export async function fetchBundle(
+  deployment: Deployment,
+  token: string,
+  privateKey: CryptoKey,
+  repo: string,
+  environment: string,
+): Promise<Bundle> {
+  return openBundle(await fetchRawBundle(deployment, token, repo, environment), privateKey, environment);
 }

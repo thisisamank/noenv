@@ -10,7 +10,9 @@ import { addUser, fetchWorker, startWorker, type TestWorker } from "@noenv/worke
 import { api, repoPath } from "../src/api.ts";
 import type { Deployment } from "../src/deployment.ts";
 import { writeJsonFile } from "../src/files.ts";
-import { hookEnv, type HookInput } from "../src/hook-env.ts";
+import { hookEnv, type HookInput, type HookOutput } from "../src/hook-env.ts";
+import { refresh } from "../src/refresh.ts";
+import { findTarget } from "../src/target.ts";
 import { ensureIdentity, type Identity } from "../src/identity.ts";
 import { remoteSecretStore } from "../src/secret-store.ts";
 import { checkForUpdates, markChanged } from "../src/watch.ts";
@@ -95,8 +97,22 @@ function input({ deployment: target = deployment, ...overrides }: Partial<HookIn
   };
 }
 
+async function run(overrides: Partial<HookInput> & { deployment?: Deployment }): Promise<HookOutput> {
+  const first = await hookEnv(input(overrides));
+  if (!first.refresh) return first;
+  const target = await findTarget(first.refresh.root, { NOENV_ENVIRONMENT: first.refresh.environment });
+  await refresh(overrides.deployment ?? deployment, target!);
+  const state = bash(`${first.lines.join("\n")}\nprintf '%s' "$_NOENV_STATE"`);
+  const second = await hookEnv(input({ ...overrides, state }));
+  return { lines: [...first.lines, ...second.lines], messages: [...first.messages, ...second.messages], refresh: second.refresh };
+}
+
+function secretLines(lines: string[]): string[] {
+  return lines.filter((line) => line.startsWith("export ") && !line.startsWith("export _NOENV_"));
+}
+
 function stateOf(lines: string[]): Record<string, unknown> {
-  const encoded = lines.find((line) => line.startsWith("_NOENV_STATE="))!.slice("_NOENV_STATE='".length, -1);
+  const encoded = lines.findLast((line) => line.startsWith("export _NOENV_STATE="))!.slice("export _NOENV_STATE='".length, -1);
   return JSON.parse(Buffer.from(encoded, "base64").toString("utf8"));
 }
 
@@ -105,7 +121,7 @@ function bash(script: string): string {
 }
 
 test("loads secrets in a subdirectory and restores the previous value on exit", async () => {
-  const entered = await hookEnv(input({ cwd: join(repo, "src"), env: { API_KEY: "original" } }));
+  const entered = await run({ cwd: join(repo, "src"), env: { API_KEY: "original" } });
   assert.deepEqual(entered.messages, ["loaded 1 secrets for github.com/acme/backend (development)"]);
 
   const prelude = "export API_KEY=original";
@@ -113,7 +129,7 @@ test("loads secrets in a subdirectory and restores the previous value on exit", 
 
   const state = bash(`${entered.lines.join("\n")}\nprintf '%s' "$_NOENV_STATE"`);
   const stayed = await hookEnv(input({ cwd: repo, state, env: { API_KEY: SECRET } }));
-  assert.deepEqual(stayed, { lines: [], messages: [] });
+  assert.deepEqual([secretLines(stayed.lines), stayed.messages, stayed.refresh], [[], [], undefined]);
 
   const left = await hookEnv(input({ cwd: outside, state, env: { API_KEY: SECRET } }));
   const script = `${prelude}\n${entered.lines.join("\n")}\n${left.lines.join("\n")}\nprintf '%s|%s' "$API_KEY" "\${_NOENV_STATE-unset}"`;
@@ -121,7 +137,7 @@ test("loads secrets in a subdirectory and restores the previous value on exit", 
 });
 
 test("unsets secrets that did not exist before", async () => {
-  const entered = await hookEnv(input({}));
+  const entered = await run({});
   const state = bash(`${entered.lines.join("\n")}\nprintf '%s' "$_NOENV_STATE"`);
   const left = await hookEnv(input({ cwd: outside, state }));
 
@@ -152,26 +168,36 @@ test("starts one sign-in and does not repeat the message while it is pending", a
 
 test("stays silent in unknown repos and reports access errors in repos with a .noenv file", async () => {
   const unknown = await gitRepo("https://github.com/acme/unrelated.git");
-  const silent = await hookEnv(input({ cwd: unknown }));
+  const silent = await run({ cwd: unknown });
   assert.deepEqual(silent.messages, []);
   assert.deepEqual(stateOf(silent.lines).previous, {});
 
   const optedIn = await gitRepo("https://github.com/acme/frontend.git", { ".noenv": "version = 1" });
-  const result = await hookEnv(input({ cwd: optedIn }));
+  const result = await run({ cwd: optedIn });
   assert.match(result.messages[0], /could not load secrets for github.com\/acme\/frontend/);
 });
 
-test("an expired session is cleared and the shell retries", async () => {
+test("an expired session is cleared and sign-in starts", async () => {
   const revoked = await deploymentIn(await mkdtemp(join(tmpdir(), "noenv-config-")));
   await signIn(revoked, "invalid-token");
 
-  const result = await hookEnv(input({ deployment: revoked }));
+  const result = await run({ deployment: revoked, startPoller: () => {}, openBrowser: () => {} });
   assert.ok(result.lines.includes("_NOENV_RETRY='1'"));
-  assert.deepEqual(result.messages, []);
+  assert.match(result.messages[0], /sign in to load secrets/);
+});
+
+test("entering a repository with cached secrets makes no network request", async () => {
+  await run({});
+  const offline: Deployment = { ...deployment, fetch: () => assert.fail("unexpected request") };
+
+  const result = await hookEnv(input({ deployment: offline }));
+  assert.deepEqual(result.messages, ["loaded 1 secrets for github.com/acme/backend (development)"]);
+  assert.equal(bash(`${result.lines.join("\n")}\nprintf '%s' "$API_KEY"`), SECRET);
+  assert.ok(result.refresh);
 });
 
 test("NOENV_ENVIRONMENT selects another environment", async () => {
-  const result = await hookEnv(input({ env: { NOENV_ENVIRONMENT: "production" } }));
+  const result = await run({ env: { NOENV_ENVIRONMENT: "production" } });
   assert.equal(stateOf(result.lines).environment, "production");
   assert.deepEqual(result.messages, []);
 
@@ -185,7 +211,7 @@ test("delete mode migrates .env files, deletes them, and loads their values", as
   await setDotenvPolicy("github.com/acme/delete-mode", "delete");
   const root = await gitRepo("git@github.com:acme/delete-mode.git", { ".env": "LOCAL_ONLY=from-dotenv", ".env.example": "LOCAL_ONLY=" });
 
-  const result = await hookEnv(input({ cwd: root }));
+  const result = await run({ cwd: root });
 
   assert.equal(existsSync(join(root, ".env")), false);
   assert.equal(existsSync(join(root, ".env.example")), true);
@@ -203,10 +229,10 @@ test("block mode keeps the file and does not load secrets", async () => {
   await setDotenvPolicy("github.com/acme/block-mode", "block");
   const root = await gitRepo("git@github.com:acme/block-mode.git", { ".env": "API_KEY=local" });
 
-  const result = await hookEnv(input({ cwd: root }));
+  const result = await run({ cwd: root });
 
   assert.equal(existsSync(join(root, ".env")), true);
-  assert.equal(result.lines.some((line) => line.startsWith("export ")), false);
+  assert.deepEqual(secretLines(result.lines), []);
   assert.match(result.messages.at(-1)!, /"block" policy does not allow .env files/);
 });
 
@@ -215,7 +241,7 @@ test("warn mode loads secrets and reports the file", async () => {
   await store("github.com/acme/warn-mode").set("API_KEY", "x");
   const root = await gitRepo("git@github.com:acme/warn-mode.git", { ".env.local": "API_KEY=local" });
 
-  const result = await hookEnv(input({ cwd: root }));
+  const result = await run({ cwd: root });
 
   assert.deepEqual(result.messages, [".env.local: found", "loaded 1 secrets for github.com/acme/warn-mode (development)"]);
   assert.equal(existsSync(join(root, ".env.local")), true);
@@ -226,14 +252,14 @@ test("a secret saved from this shell loads at the next prompt", async () => {
   await createProject(name);
   const root = await gitRepo(`git@github.com:${name.split("/").slice(1).join("/")}.git`);
 
-  const entered = await hookEnv(input({ cwd: root }));
+  const entered = await run({ cwd: root });
   const state = bash(`${entered.lines.join("\n")}\nprintf '%s' "$_NOENV_STATE"`);
-  assert.deepEqual(await hookEnv(input({ cwd: root, state })), { lines: [], messages: [] });
+  assert.deepEqual(secretLines((await hookEnv(input({ cwd: root, state }))).lines), []);
 
   await store(name).set("FRESH", "just-saved");
   await markChanged(deployment, name, "development");
 
-  const next = await hookEnv(input({ cwd: root, state }));
+  const next = await run({ cwd: root, state });
   assert.deepEqual(next.messages, [`updated 1 secrets for ${name} (development)`]);
   assert.equal(bash(`${entered.lines.join("\n")}\n${next.lines.join("\n")}\nprintf '%s' "$FRESH"`), "just-saved");
 });
@@ -244,14 +270,14 @@ test("a change made elsewhere loads after the watcher sees the new revision", as
   await store(name).set("SHARED", "v1");
   const root = await gitRepo(`git@github.com:${name.split("/").slice(1).join("/")}.git`);
 
-  const entered = await hookEnv(input({ cwd: root }));
+  const entered = await run({ cwd: root });
   const state = bash(`${entered.lines.join("\n")}\nprintf '%s' "$_NOENV_STATE"`);
 
   await store(name).set("SHARED", "v2");
-  assert.deepEqual((await hookEnv(input({ cwd: root, state }))).lines, []);
+  assert.deepEqual(secretLines((await hookEnv(input({ cwd: root, state }))).lines), []);
 
   assert.equal(await checkForUpdates(deployment), true);
-  const next = await hookEnv(input({ cwd: root, state }));
+  const next = await run({ cwd: root, state });
   assert.equal(bash(`${entered.lines.join("\n")}\n${next.lines.join("\n")}\nprintf '%s' "$SHARED"`), "v2");
 });
 
@@ -260,10 +286,16 @@ test("switching to a repo of another account restores the first account's values
   const otherAccount = { ...other, url: "https://noenv.other.test" };
   await signIn(otherAccount, "invalid-token");
 
-  const entered = await hookEnv(input({}));
+  const entered = await run({});
   const state = bash(`${entered.lines.join("\n")}\nprintf '%s' "$_NOENV_STATE"`);
-  const switched = await hookEnv(input({ state, deployment: otherAccount }));
+  const switched = await run({ state, deployment: otherAccount, startPoller: () => {}, openBrowser: () => {} });
 
   assert.ok(switched.lines.includes("unset API_KEY"));
   assert.equal(stateOf(switched.lines).url, "https://noenv.other.test");
+});
+
+test("the restore script unloads secrets without running noenv", async () => {
+  const entered = await run({ env: { API_KEY: "original" } });
+  const script = `export API_KEY=original\n${entered.lines.join("\n")}\neval "$_NOENV_RESTORE"\nprintf '%s|%s' "$API_KEY" "\${_NOENV_STATE-unset}"`;
+  assert.equal(bash(script), "original|unset");
 });

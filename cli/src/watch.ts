@@ -9,7 +9,7 @@ import { loadSession } from "./session.ts";
 
 const POLL_INTERVAL_MS = 5_000;
 const IDLE_LIMIT_MS = 60 * 60 * 1000;
-const CHANGED = "changed";
+export const CHANGED = "changed";
 
 type WatchEntry = { repo: string; environment: string; seenAt: number };
 type WatchList = Record<string, WatchEntry>;
@@ -78,7 +78,8 @@ async function refreshMarkers(deployment: Deployment, token: string, entries: Wa
   });
   for (const { repo, environment, revision } of revisions) {
     const path = markerPath(deployment, repo, environment);
-    if ((await readMarker(path)) !== String(revision)) await writeMarker(path, String(revision));
+    const marker = await readMarker(path);
+    if (marker !== CHANGED && marker.split(":")[0] !== String(revision)) await writeMarker(path, CHANGED);
   }
 }
 

@@ -4,7 +4,7 @@ import { authCommand, statusCommand } from "./commands/auth.ts";
 import { migrateCommand } from "./commands/migrate.ts";
 import { grantCommand, initCommand, inviteCommand, revokeCommand } from "./commands/project.ts";
 import { secretCommand } from "./commands/secret.ts";
-import { hookEnvCommand, shellCommand, watchCommand } from "./commands/shell.ts";
+import { hookEnvCommand, refreshCommand, shellCommand, watchCommand } from "./commands/shell.ts";
 
 const USAGE = `usage: noenv <command>
 
@@ -32,6 +32,7 @@ const commands: Record<string, (args: string[]) => Promise<void>> = {
   account: accountCommand,
   shell: shellCommand,
   "hook-env": hookEnvCommand,
+  refresh: refreshCommand,
   watch: watchCommand,
   auth: authCommand,
   status: statusCommand,
