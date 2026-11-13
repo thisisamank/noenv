@@ -208,7 +208,7 @@ ${banner}
   ${card("file", "Move your .env files in", "migrate-from-env", `<p>Uploads every value, reads it back, and only then offers to delete the file.</p>${code("noenv migrate")}`)}
   ${card("bot", "Coding agents and CI", "agents-ci-and-workers", `<p>Agents start a fresh shell for each command. Give them this line in <code>CLAUDE.md</code> or <code>AGENTS.md</code>:</p>${code("Run commands that need environment variables with `noenv exec -- <command>`. Do not create .env files.")}`)}
   ${card("cloud", "Push secrets to a Worker", "agents-ci-and-workers#wrangler", `<p>Pick keys in a list. They go to <code>wrangler secret bulk</code> on stdin, never on screen.</p>${code("noenv wrangler")}`)}
-  ${card("users", "Work with more than one team", "multiple-accounts", `<p>Save this deployment as a named account, so repositories under a prefix use it.</p>${code(`noenv account add work ${origin} github.com/your-org`)}`)}
+  ${card("users", "Work with more than one team", "multiple-accounts", `<p>Add this deployment as an account. <code>noenv init</code> asks which account a repository uses and saves its URL in <code>.noenv</code>.</p>${code(`noenv account add ${origin}\nnoenv init`)}`)}
   ${card("dashboard", "Manage it in the browser", "team-and-access", `<p>Projects, secret history and rollback, team invites, <code>.env</code> policies, and device compliance.</p><a class="btn" href="/dashboard/">Open the dashboard ${icon("arrow")}</a>`)}
 </div>
 
