@@ -8,9 +8,20 @@
 - Every change is a new version, and any version can be restored.
 - People sign in with passkeys and get reader, editor, or admin roles.
 - Admins can warn about, block, or migrate and delete .env files on team machines.
+- Coding agents, scripts, and CI run commands with `noenv exec -- <command>`.
+- `noenv wrangler` pushes secrets to a Cloudflare Worker without printing them.
 
 ## Get started
 
 - [Deploy to Cloudflare](https://deploy.workers.cloudflare.com/?url=https://github.com/thisisamank/noenv): one-click deployment
 - [@thisisamank/noenv-cli on npm](https://www.npmjs.com/package/@thisisamank/noenv-cli): `npm install -g @thisisamank/noenv-cli`
 - [Source and README](https://github.com/thisisamank/noenv): setup steps, commands, and design
+
+## Guides
+
+- [Getting started](https://noenv.thisisamank.in/guides/getting-started): deploy, create the admin passkey, connect the shell, add a project
+- [Migrate from .env](https://noenv.thisisamank.in/guides/migrate-from-env): move .env files into noenv and delete them safely
+- [Agents, CI, and Workers](https://noenv.thisisamank.in/guides/agents-ci-and-workers): noenv exec for coding agents and CI, noenv wrangler to push secrets to Workers
+- [Team and access](https://noenv.thisisamank.in/guides/team-and-access): invites, roles, noenv grant, removing access
+- [Policies and devices](https://noenv.thisisamank.in/guides/policies-and-devices): .env policy modes, CLI version, session expiry, compliance
+- [Changelog](https://noenv.thisisamank.in/changelog): every release, newest first

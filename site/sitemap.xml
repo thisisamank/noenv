@@ -2,6 +2,34 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://noenv.thisisamank.in/</loc>
-    <lastmod>2026-10-31</lastmod>
+    <lastmod>2026-11-13</lastmod>
+  </url>
+  <url>
+    <loc>https://noenv.thisisamank.in/guides</loc>
+    <lastmod>2026-11-13</lastmod>
+  </url>
+  <url>
+    <loc>https://noenv.thisisamank.in/changelog</loc>
+    <lastmod>2026-11-13</lastmod>
+  </url>
+  <url>
+    <loc>https://noenv.thisisamank.in/guides/getting-started</loc>
+    <lastmod>2026-11-13</lastmod>
+  </url>
+  <url>
+    <loc>https://noenv.thisisamank.in/guides/migrate-from-env</loc>
+    <lastmod>2026-11-13</lastmod>
+  </url>
+  <url>
+    <loc>https://noenv.thisisamank.in/guides/agents-ci-and-workers</loc>
+    <lastmod>2026-11-13</lastmod>
+  </url>
+  <url>
+    <loc>https://noenv.thisisamank.in/guides/team-and-access</loc>
+    <lastmod>2026-11-13</lastmod>
+  </url>
+  <url>
+    <loc>https://noenv.thisisamank.in/guides/policies-and-devices</loc>
+    <lastmod>2026-11-13</lastmod>
   </url>
 </urlset>
