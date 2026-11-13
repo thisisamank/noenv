@@ -107,6 +107,10 @@
 <pre><code>NOENV_ENVIRONMENT=production noenv grant sam@acme.com reader</code></pre>
 <div class="note"><svg class="icon"><use href="/icons.svg#info"/></svg><div>Key sharing needs your private key, which lives only in <code>~/.config/noenv</code> on your machine. That is why <code>noenv grant</code> runs in the CLI and not in the dashboard. The dashboard shows who holds a key for each environment.</div></div>
 
+<h2 id="cancel">Cancel an invite</h2>
+<p>An invite that nobody has used yet can be cancelled. Click <strong>Cancel invite</strong> next to the person in <strong>Overview</strong> or <strong>Team</strong>. The invite link stops working at once, and the person is removed from every project they were added to.</p>
+<p>You can only cancel an invite for a person who has not joined. For a person who already has a passkey, remove them from the project instead.</p>
+
 <h2 id="remove">Remove a person</h2>
 <p>Remove them from the project <strong>Members</strong> card, or run:</p>
 <pre><code>noenv revoke sam@acme.com</code></pre>
