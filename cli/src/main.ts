@@ -11,13 +11,11 @@ import { hookEnvCommand, refreshCommand, shellCommand, watchCommand } from "./co
 const USAGE = `usage: noenv <command>
 
   shell zsh|bash             print the shell hook for your shell profile
-  account add NAME URL [PREFIX...]
-                             add an account, such as work or personal; repos
-                             under a PREFIX (github.com/acme) use it
+  account add NAME URL       add an account, such as work or personal
   account list               list accounts, * marks the default
-  account default NAME       use NAME where no prefix matches
+  account default NAME       use NAME in repositories whose .noenv names no account
   account remove NAME        forget an account
-  auth [NAME]                sign in to an account (default: the one for this repo)
+  auth [NAME]                sign in to an account (default: the one in .noenv)
   status                     show the account, user, and project
   init                       create the project, the environment, and the .noenv file
   exec -- COMMAND            run COMMAND with this repository's secrets, for agents,

@@ -40,7 +40,7 @@ export function withoutLoadedSecrets(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv 
 async function projectSecrets(env: NodeJS.ProcessEnv): Promise<Record<string, string>> {
   const target = await findTarget(process.cwd(), env);
   if (!target) return note("not in a git repository with an origin, running without secrets");
-  const deployment = await resolveDeployment(target.repo, env);
+  const deployment = await resolveDeployment(target.deployment, env);
   if (!deployment) return note("no account is set up, running without secrets");
 
   const token = await requireSession(deployment);

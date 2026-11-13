@@ -10,22 +10,25 @@ export type CommandContext = {
   target: Target;
 };
 
-export async function requireDeployment(repo?: string): Promise<Deployment> {
-  const found = repo ?? (await findTarget(process.cwd(), process.env).catch(() => null))?.repo ?? null;
-  const deployment = await resolveDeployment(found);
+export async function requireDeployment(projectUrl?: string): Promise<Deployment> {
+  const deployment = await resolveDeployment(projectUrl);
   if (!deployment) {
-    throw new Error("no noenv account is set up, run `noenv account add NAME URL` or set NOENV_URL");
+    throw new Error("no noenv account is set up, run `noenv account add URL` or set NOENV_URL");
   }
   return deployment;
 }
 
-export async function signedIn(repo?: string): Promise<Omit<CommandContext, "target">> {
-  const deployment = await requireDeployment(repo);
+export async function currentDeployment(): Promise<Deployment> {
+  return requireDeployment((await findTarget(process.cwd(), process.env).catch(() => null))?.deployment);
+}
+
+export async function signedIn(deployment?: Deployment): Promise<Omit<CommandContext, "target">> {
+  deployment ??= await currentDeployment();
   const token = await requireSession(deployment);
   return { deployment, token, identity: await ensureIdentity(deployment, token) };
 }
 
 export async function inProject(): Promise<CommandContext> {
   const target = await requireTarget();
-  return { ...(await signedIn(target.repo)), target };
+  return { ...(await signedIn(await requireDeployment(target.deployment))), target };
 }

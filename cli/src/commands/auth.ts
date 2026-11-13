@@ -1,6 +1,6 @@
 import { api, environmentPath } from "../api.ts";
-import { requireDeployment } from "../context.ts";
-import { deploymentAt, resolveDeployment, type Deployment } from "../deployment.ts";
+import { currentDeployment, requireDeployment } from "../context.ts";
+import { deploymentAt, namedDeployment, type Deployment } from "../deployment.ts";
 import { loadSession, openBrowser, readPendingSignIn, startSignIn, waitForSignIn } from "../session.ts";
 import { findTarget } from "../target.ts";
 
@@ -8,13 +8,13 @@ type Me = { email: string; isAdmin: boolean };
 
 export async function authCommand(args: string[]): Promise<void> {
   if (args[0] === "--wait") {
-    const deployment = args[1] ? deploymentAt(args[1]) : await requireDeployment();
+    const deployment = args[1] ? deploymentAt(args[1]) : await currentDeployment();
     const pending = await readPendingSignIn(deployment);
     if (pending) await waitForSignIn(deployment, pending);
     return;
   }
 
-  const deployment = await accountOrCurrent(args[0]);
+  const deployment = args[0] ? await namedDeployment(args[0]) : await currentDeployment();
   const { pending, started } = await startSignIn(deployment);
   console.log(`Open ${pending.url} and confirm the code ${pending.userCode}`);
   if (started) openBrowser(pending.url);
@@ -28,8 +28,8 @@ export async function authCommand(args: string[]): Promise<void> {
 
 export async function statusCommand(): Promise<void> {
   const target = await findTarget(process.cwd(), process.env);
-  const deployment = await requireDeployment(target?.repo);
-  if (deployment.account) console.log(`Account:     ${deployment.account}`);
+  const deployment = await requireDeployment(target?.deployment);
+  if (deployment.account) console.log(`Account:     ${deployment.account}${target?.deployment ? " (matches the deployment in .noenv)" : ""}`);
   console.log(`Deployment:  ${deployment.url}`);
 
   const token = await loadSession(deployment);
@@ -54,11 +54,6 @@ export async function statusCommand(): Promise<void> {
   } catch {
     console.log("Secrets:     no access");
   }
-}
-
-async function accountOrCurrent(name: string | undefined): Promise<Deployment> {
-  if (!name) return requireDeployment();
-  return (await resolveDeployment(null, { ...process.env, NOENV_ACCOUNT: name }))!;
 }
 
 function label(deployment: Deployment): string {

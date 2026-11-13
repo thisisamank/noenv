@@ -11,7 +11,6 @@ export type Deployment = {
 
 export type Account = {
   url: string;
-  match: string[];
 };
 
 export type Accounts = {
@@ -39,28 +38,28 @@ export async function writeAccounts(accounts: Accounts, env: NodeJS.ProcessEnv =
   await writeJsonFile(accountsPath(env), accounts);
 }
 
-export function matchAccount(accounts: Accounts, repo: string): string | undefined {
-  let best: { name: string; length: number } | undefined;
-  for (const [name, account] of Object.entries(accounts.accounts)) {
-    for (const prefix of account.match) {
-      const clean = prefix.toLowerCase().replace(/\/+$/, "");
-      if ((repo === clean || repo.startsWith(`${clean}/`)) && clean.length > (best?.length ?? -1)) {
-        best = { name, length: clean.length };
-      }
-    }
-  }
-  return best?.name;
+export async function resolveDeployment(projectUrl: string | undefined, env: NodeJS.ProcessEnv = process.env): Promise<Deployment | null> {
+  const accounts = await readAccounts(env);
+  if (projectUrl) return projectDeployment(accounts, projectUrl, env);
+
+  const name = env.NOENV_ACCOUNT || accounts.default;
+  if (name) return namedDeployment(name, env, accounts);
+  return env.NOENV_URL ? deploymentAt(env.NOENV_URL, env) : null;
 }
 
-export async function resolveDeployment(repo: string | null, env: NodeJS.ProcessEnv = process.env): Promise<Deployment | null> {
-  const accounts = await readAccounts(env);
-  const name = env.NOENV_ACCOUNT || (repo ? matchAccount(accounts, repo) : undefined) || accounts.default;
-  if (name) {
-    const account = accounts.accounts[name];
-    if (!account) throw new Error(`there is no account named "${name}", run \`noenv account list\``);
-    return deploymentAt(account.url, env, name);
+export async function namedDeployment(name: string, env: NodeJS.ProcessEnv = process.env, accounts?: Accounts): Promise<Deployment> {
+  const found = (accounts ?? (await readAccounts(env))).accounts[name];
+  if (!found) throw new Error(`there is no account named "${name}", run \`noenv account list\``);
+  return deploymentAt(found.url, env, name);
+}
+
+function projectDeployment(accounts: Accounts, projectUrl: string, env: NodeJS.ProcessEnv): Deployment {
+  for (const [name, account] of Object.entries(accounts.accounts)) {
+    const deployment = deploymentAt(account.url, env, name);
+    if (deployment.url === projectUrl) return deployment;
   }
-  return env.NOENV_URL ? deploymentAt(env.NOENV_URL, env) : null;
+  if (env.NOENV_URL && deploymentAt(env.NOENV_URL, env).url === projectUrl) return deploymentAt(env.NOENV_URL, env);
+  throw new Error(`this repository uses the deployment ${projectUrl}, add it with \`noenv account add ${projectUrl}\``);
 }
 
 function accountsPath(env: NodeJS.ProcessEnv): string {

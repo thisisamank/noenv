@@ -337,3 +337,10 @@ test("the restore script unloads secrets without running noenv", async () => {
   const script = `export API_KEY=original\n${entered.lines.join("\n")}\neval "$_NOENV_RESTORE"\nprintf '%s|%s' "$API_KEY" "\${_NOENV_STATE-unset}"`;
   assert.equal(bash(script), "original|unset");
 });
+
+test("the hook looks up the deployment named in .noenv", async () => {
+  const root = await gitRepo("git@github.com:acme/named.git", { ".noenv": 'version = 1\ndeployment = "https://noenv.acme.com/"\n' });
+  const asked: (string | undefined)[] = [];
+  await hookEnv({ ...input({ cwd: root }), resolveDeployment: async (url) => (asked.push(url), null) });
+  assert.deepEqual(asked, ["https://noenv.acme.com"]);
+});

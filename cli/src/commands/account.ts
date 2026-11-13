@@ -2,8 +2,7 @@ import { IDENTIFIER } from "@noenv/config/names";
 import { deploymentAt, readAccounts, writeAccounts } from "../deployment.ts";
 import { loadSession } from "../session.ts";
 
-const USAGE = "usage: noenv account add NAME URL [REPO_PREFIX...] | list | default NAME | remove NAME";
-const PREFIX = /^[a-z0-9.-]+(\/[a-z0-9._~-]+)*\/?$/;
+const USAGE = "usage: noenv account add NAME URL | list | default NAME | remove NAME";
 
 export async function accountCommand([action, ...args]: string[]): Promise<void> {
   const handlers: Record<string, (args: string[]) => Promise<void>> = {
@@ -17,19 +16,19 @@ export async function accountCommand([action, ...args]: string[]): Promise<void>
   await handler(args);
 }
 
-async function addAccount([name, url, ...match]: string[]): Promise<void> {
+async function addAccount([name, url, ...extra]: string[]): Promise<void> {
   if (!name || !url) throw new Error(USAGE);
+  if (extra.length > 0) {
+    throw new Error("repository prefixes are no longer used, `noenv init` saves the deployment in the .noenv file of each repository");
+  }
   if (!IDENTIFIER.test(name)) throw new Error('the account name must contain only letters, digits, "_" or "-"');
   const deployment = deploymentAt(url);
-  const prefixes = match.map((prefix) => prefix.toLowerCase());
-  const invalid = prefixes.find((prefix) => !PREFIX.test(prefix));
-  if (invalid) throw new Error(`${invalid} is not a repository prefix such as github.com/acme`);
 
   const accounts = await readAccounts();
   const clash = Object.entries(accounts.accounts).find(([other, account]) => other !== name && deploymentAt(account.url).url === deployment.url);
   if (clash) throw new Error(`the account "${clash[0]}" already uses ${deployment.url}`);
 
-  accounts.accounts[name] = { url: deployment.url, match: prefixes };
+  accounts.accounts[name] = { url: deployment.url };
   accounts.default ??= name;
   await writeAccounts(accounts);
   console.log(`Saved account ${name} (${deployment.url})${accounts.default === name ? " as the default" : ""}`);
@@ -40,14 +39,13 @@ async function listAccounts(): Promise<void> {
   const accounts = await readAccounts();
   const entries = Object.entries(accounts.accounts);
   if (entries.length === 0) {
-    console.log("No accounts. Add one with `noenv account add NAME URL [REPO_PREFIX...]`");
+    console.log("No accounts. Add one with `noenv account add NAME URL`");
     return;
   }
   for (const [name, account] of entries) {
     const signedIn = (await loadSession(deploymentAt(account.url))) ? "signed in" : "signed out";
     const marker = accounts.default === name ? "*" : " ";
-    const match = account.match.length > 0 ? `  ${account.match.join(", ")}` : "";
-    console.log(`${marker} ${name}  ${account.url}  ${signedIn}${match}`);
+    console.log(`${marker} ${name}  ${account.url}  ${signedIn}`);
   }
 }
 

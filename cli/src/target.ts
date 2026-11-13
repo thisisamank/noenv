@@ -4,6 +4,7 @@ import { IDENTIFIER } from "@noenv/config/names";
 export type Target = {
   root: string;
   repo: string;
+  deployment?: string;
   environment: string;
   requiredSecrets: string[];
   hasConfig: boolean;

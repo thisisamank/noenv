@@ -27,7 +27,7 @@ export type HookInput = {
   cwd: string;
   env: NodeJS.ProcessEnv;
   state: string;
-  resolveDeployment: (repo: string) => Promise<Deployment | null>;
+  resolveDeployment: (projectUrl: string | undefined) => Promise<Deployment | null>;
   startPoller: (deployment: Deployment) => void;
   pollerRunning: (deployment: Deployment) => Promise<boolean>;
   startWatcher: (deployment: Deployment) => void;
@@ -184,7 +184,7 @@ async function signIn(
 async function resolve(input: HookInput, messages: string[]): Promise<Resolved | null> {
   try {
     const target = await findTarget(input.cwd, input.env);
-    const deployment = target && (await input.resolveDeployment(target.repo));
+    const deployment = target && (await input.resolveDeployment(target.deployment));
     return target && deployment ? { target, deployment } : null;
   } catch (error) {
     messages.push(describe(error));

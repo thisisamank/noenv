@@ -19,7 +19,7 @@ export async function hookEnvCommand([shell]: string[]): Promise<void> {
     cwd: process.cwd(),
     env: process.env,
     state,
-    resolveDeployment: (repo) => resolveDeployment(repo),
+    resolveDeployment: (projectUrl) => resolveDeployment(projectUrl),
     startPoller: startBackgroundPoller,
     pollerRunning,
     startWatcher: (deployment) => void startWatcher(deployment),
