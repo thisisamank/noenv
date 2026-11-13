@@ -1,9 +1,12 @@
 import { ENV_VAR_NAME } from "@noenv/config/names";
 import { api, environmentPath } from "../api.ts";
+import { fetchBundle } from "../bundle.ts";
 import { inProject } from "../context.ts";
 import { readSecretValue } from "../prompt.ts";
 import { remoteSecretStore } from "../secret-store.ts";
+import type { Target } from "../target.ts";
 import { markChanged } from "../watch.ts";
+import { putWranglerSecrets, wranglerSource } from "../wrangler.ts";
 
 type SecretRow = { name: string; version: number; author: string; updatedAt: string };
 type VersionRow = { version: number; author: string; restoredFrom: number | null; createdAt: string };
@@ -35,6 +38,7 @@ async function setSecret([name]: string[]): Promise<void> {
   const version = await store.set(name, value);
   await markChanged(deployment, target.repo, target.environment);
   console.log(`Saved ${name} as version ${version} in ${target.repo} (${target.environment})`);
+  await syncToWrangler(target, name, async () => value);
 }
 
 async function listSecrets(): Promise<void> {
@@ -73,7 +77,7 @@ async function rollbackSecret([name, version]: string[]): Promise<void> {
     throw new Error("usage: noenv secret rollback KEY VERSION");
   }
 
-  const { deployment, token, target } = await inProject();
+  const { deployment, token, identity, target } = await inProject();
   const result = await api<{ version: number }>(
     deployment,
     "POST",
@@ -82,6 +86,24 @@ async function rollbackSecret([name, version]: string[]): Promise<void> {
   );
   await markChanged(deployment, target.repo, target.environment);
   console.log(`Restored ${name} v${version} as v${result.version}`);
+  await syncToWrangler(target, name, async () => {
+    const { secrets } = await fetchBundle(deployment, token, identity.privateKey, target.repo, target.environment);
+    return secrets[name]!;
+  });
+}
+
+async function syncToWrangler(target: Target, name: string, value: () => Promise<string>): Promise<void> {
+  if (!target.wrangler.secrets.includes(name)) return;
+  if (wranglerSource(target) !== target.environment) {
+    console.log(`Not pushed to Wrangler: .noenv pushes values from ${wranglerSource(target)}, not ${target.environment}`);
+    return;
+  }
+  try {
+    await putWranglerSecrets(target, { [name]: await value() });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "unknown error";
+    throw new Error(`${name} is saved in noenv, but the Wrangler update failed: ${reason}. Run \`noenv wrangler ${name}\` to try again`);
+  }
 }
 
 function requireName(name: string | undefined): asserts name is string {

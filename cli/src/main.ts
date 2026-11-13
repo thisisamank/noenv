@@ -2,6 +2,7 @@
 import { accountCommand } from "./commands/account.ts";
 import { authCommand, statusCommand } from "./commands/auth.ts";
 import { execCommand } from "./commands/exec.ts";
+import { wranglerCommand } from "./commands/wrangler.ts";
 import { migrateCommand } from "./commands/migrate.ts";
 import { grantCommand, initCommand, inviteCommand, revokeCommand } from "./commands/project.ts";
 import { secretCommand } from "./commands/secret.ts";
@@ -27,6 +28,9 @@ const USAGE = `usage: noenv <command>
   secret history KEY         list the versions of a secret
   secret rollback KEY VER    restore an older version of a secret
   migrate                    move .env files of this repository into noenv
+  wrangler [KEY...]          push secrets to the Worker with wrangler; without KEY,
+                             pick them in a list (keys under [wrangler] secrets in
+                             .noenv are checked; without a terminal, push those)
   invite EMAIL               invite a user to this deployment
   grant EMAIL ROLE           give a user access to this project and environment
   revoke EMAIL               remove a user from this project
@@ -44,6 +48,7 @@ const commands: Record<string, (args: string[]) => Promise<void>> = {
   init: initCommand,
   secret: secretCommand,
   migrate: migrateCommand,
+  wrangler: wranglerCommand,
   invite: inviteCommand,
   grant: grantCommand,
   revoke: revokeCommand,

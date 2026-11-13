@@ -83,6 +83,7 @@ noenv secret set API_KEY    # prompts for the value and keeps it off screen
 | `noenv secret rollback KEY VERSION` | Restore an older version |
 | `noenv migrate` | Move this repo's `.env` files into noenv |
 | `noenv exec -- CMD` | Run a command with this repo's secrets, without the shell hook |
+| `noenv wrangler [KEY...]` | Push secrets to your Worker; without KEY, pick them in a list |
 | `noenv grant EMAIL ROLE` | Give someone access to this project and share the key |
 
 Set the environment with `environment = "staging"` in a `.noenv` file in the repo, or with `NOENV_ENVIRONMENT=staging` for one shell.
@@ -90,6 +91,28 @@ Set the environment with `environment = "staging"` in a `.noenv` file in the rep
 The dashboard does the rest: projects, secrets and history, team invites, policies, and devices.
 
 Commit the `.noenv` file that `noenv init` creates. It tells teammates' shells that the repo uses noenv, so access problems show up as messages instead of silence.
+
+## Push secrets to Cloudflare Workers
+
+`noenv wrangler` copies secrets from noenv to your Worker with `wrangler secret bulk`. The values go to Wrangler on stdin, so they never show on screen or land in a file.
+
+```sh
+noenv wrangler                    # pick the secrets in a list
+noenv wrangler STRIPE_KEY API_KEY # push these, no list
+```
+
+In the list, use the arrow keys or `j`/`k` to move, space to select, `a` to select all, enter to push, and esc to cancel.
+
+To push some keys every time you change them, list them in `.noenv`:
+
+```toml
+[wrangler]
+secrets = ["STRIPE_KEY", "API_KEY"]  # pushed after `noenv secret set` and `noenv secret rollback`
+environment = "production"           # optional: the noenv environment to copy from (default: the current one)
+env = "staging"                      # optional: passed to wrangler as --env
+```
+
+The keys in this list start selected in `noenv wrangler`. Without a terminal, for example from an agent or CI, `noenv wrangler` pushes this list. The CLI uses the `wrangler` in the repo's `node_modules`, or the one on your `PATH`. Changes made in the dashboard do not push to Wrangler. Run `noenv wrangler` after them.
 
 ## Agents, scripts, and CI
 

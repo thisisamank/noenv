@@ -1,4 +1,4 @@
-import { findProject } from "@noenv/config";
+import { findProject, type WranglerConfig } from "@noenv/config";
 import { IDENTIFIER } from "@noenv/config/names";
 
 export type Target = {
@@ -7,6 +7,7 @@ export type Target = {
   environment: string;
   requiredSecrets: string[];
   hasConfig: boolean;
+  wrangler: WranglerConfig;
 };
 
 export async function findTarget(cwd: string, env: NodeJS.ProcessEnv): Promise<Target | null> {
