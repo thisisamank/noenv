@@ -6,10 +6,10 @@ import { EnvironmentList } from "../components/Environment.tsx";
 import { ErrorLine, Loading, useToast } from "../components/Feedback.tsx";
 import { Icon, type IconName } from "../components/Icon.tsx";
 import { displayName, shortRepo, timeAgo } from "../format.ts";
-import { announceInvite, renewInvite } from "../members.ts";
+import { announceInvite, cancelInvite, renewInvite } from "../members.ts";
 import { href } from "../router.ts";
 import type { Device, User } from "../types.ts";
-import { useResource } from "../use-resource.ts";
+import { errorMessage, useResource } from "../use-resource.ts";
 
 type Alert = {
   key: string;
@@ -18,6 +18,7 @@ type Alert = {
   title: string;
   detail: string;
   action: { label: string; href?: string; onClick?: () => void };
+  secondary?: { label: string; onClick: () => void };
 };
 
 export function Overview() {
@@ -31,7 +32,17 @@ export function Overview() {
   const copyInviteLink = async (user: User) => {
     await announceInvite(user.email, await renewInvite(user.id), notify);
   };
-  const alerts = [...deviceAlerts(devices.data ?? []), ...userAlerts(users.data ?? [], copyInviteLink)];
+  const cancel = async (user: User) => {
+    try {
+      if (await cancelInvite(user)) {
+        notify(`Cancelled the invite for ${user.email}`);
+        users.reload();
+      }
+    } catch (error) {
+      notify(errorMessage(error), "bad");
+    }
+  };
+  const alerts = [...deviceAlerts(devices.data ?? []), ...userAlerts(users.data ?? [], copyInviteLink, cancel)];
 
   return (
     <>
@@ -128,6 +139,11 @@ function AlertRow({ alert }: { alert: Alert }) {
         <b>{alert.title}</b>
         <span>{alert.detail}</span>
       </div>
+      {alert.secondary && (
+        <button className="btn sm danger" onClick={alert.secondary.onClick}>
+          {alert.secondary.label}
+        </button>
+      )}
       {alert.action.href ? (
         <a className="btn sm" href={alert.action.href}>
           {alert.action.label}
@@ -162,7 +178,7 @@ function deviceAlerts(devices: Device[]): Alert[] {
   ];
 }
 
-function userAlerts(users: User[], copyInviteLink: (user: User) => void): Alert[] {
+function userAlerts(users: User[], copyInviteLink: (user: User) => void, cancel: (user: User) => void): Alert[] {
   return users.flatMap((user): Alert[] => {
     const name = displayName(user.email);
     if (!user.hasPasskey) {
@@ -174,6 +190,7 @@ function userAlerts(users: User[], copyInviteLink: (user: User) => void): Alert[
           title: `${name} has not joined yet`,
           detail: `Invited ${timeAgo(user.createdAt)}`,
           action: { label: "Resend invite", onClick: () => copyInviteLink(user) },
+          secondary: { label: "Cancel invite", onClick: () => cancel(user) },
         },
       ];
     }

@@ -15,6 +15,13 @@ export async function renewInvite(userId: string): Promise<Invite> {
   return api<Invite>("POST", `/v1/users/${userId}/invite`);
 }
 
+export async function cancelInvite(user: { id: string; email: string; projects: unknown[] }): Promise<boolean> {
+  const reach = user.projects.length > 0 ? ` and they are removed from ${user.projects.length} ${user.projects.length === 1 ? "project" : "projects"}` : "";
+  if (!confirm(`Cancel the invite for ${user.email}? The invite link stops working${reach}.`)) return false;
+  await api("DELETE", `/v1/users/${user.id}/invite`);
+  return true;
+}
+
 export async function announceInvite(email: string, invite: Invite | undefined, notify: (message: string) => void): Promise<void> {
   if (!invite) {
     notify(`Added ${email}`);

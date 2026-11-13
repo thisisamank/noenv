@@ -5,7 +5,7 @@ import { Avatar } from "../components/Avatar.tsx";
 import { ErrorLine, Loading, useToast } from "../components/Feedback.tsx";
 import { Icon } from "../components/Icon.tsx";
 import { capitalize, displayName, shortRepo } from "../format.ts";
-import { addToProject, announceInvite, type Invite } from "../members.ts";
+import { addToProject, announceInvite, cancelInvite, type Invite } from "../members.ts";
 import type { Role, User } from "../types.ts";
 import { errorMessage, useResource } from "../use-resource.ts";
 
@@ -23,6 +23,17 @@ export function Team() {
     try {
       await action();
       notify(success);
+      users.reload();
+      projects.reload();
+    } catch (error) {
+      notify(errorMessage(error), "bad");
+    }
+  }
+
+  async function cancel(user: User) {
+    try {
+      if (!(await cancelInvite(user))) return;
+      notify(`Cancelled the invite for ${user.email}`);
       users.reload();
       projects.reload();
     } catch (error) {
@@ -56,7 +67,7 @@ export function Team() {
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ user, project }) => (
+              {rows.map(({ user, project }, index) => (
                 <tr key={`${user.id}-${project?.repo ?? "none"}`}>
                   <td>
                     <div className="cell">
@@ -100,7 +111,17 @@ export function Team() {
                     <KeyStatus user={user} missing={project?.missingKeys ?? user.projects.flatMap((candidate) => candidate.missingKeys)} />
                   </td>
                   <td>
-                    {project && (
+                    {!user.hasPasskey && !user.isAdmin && rows.findIndex((row) => row.user.id === user.id) === index && (
+                      <div className="row-actions">
+                        <button
+                          className="btn sm danger"
+                          onClick={() => cancel(user)}
+                        >
+                          Cancel invite
+                        </button>
+                      </div>
+                    )}
+                    {project && user.hasPasskey && (
                       <div className="row-actions">
                         <button
                           className="btn sm danger"
