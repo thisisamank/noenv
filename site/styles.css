@@ -117,7 +117,7 @@ img, video, svg, canvas { display: block; }
 .btn.ghost { border-color: transparent; background: transparent; color: var(--brand); padding: 0 6px; }
 .btn.ghost .icon { transition: transform 160ms var(--ease-out); }
 .btn.small { height: 36px; padding: 0 14px; font-size: 14px; }
-.btn .cloud { width: 20px; height: 20px; fill: currentColor; }
+.btn .cloud { width: 30px; height: 22px; margin-left: -4px; padding: 2px 4px; border-radius: 6px; background: #ffffff; box-sizing: content-box; }
 .icon-btn { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; transition: transform 160ms var(--ease-out), color 120ms, background-color 120ms; }
 .icon-btn:active { transform: scale(0.95); }
 .theme-toggle .sun, .theme-toggle .moon, .theme-toggle .auto { display: none; }
@@ -125,7 +125,7 @@ img, video, svg, canvas { display: block; }
 
 .install { display: inline-flex; align-items: center; gap: 4px; height: 40px; max-width: 100%; padding: 0 4px 0 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg-2); font: 400 13px "Geist Mono", monospace; color: var(--muted); }
 .install > span:first-child { color: var(--faint); margin-right: 6px; }
-.install code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.install code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
 .copy { display: grid; place-items: center; width: 32px; height: 32px; flex: none; border-radius: 6px; border: 0; background: transparent; color: var(--muted); cursor: pointer; transition: color 120ms, background-color 120ms, transform 160ms var(--ease-out); }
 .copy:active { transform: scale(0.94); }
 .copy .done { display: none; }
@@ -259,7 +259,7 @@ h2 code, h3 code { font-family: inherit; }
 
 .picker { width: min(340px, 100%); }
 .picker header { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--line); font-weight: 500; }
-.picker header .cloud { width: 22px; height: 22px; fill: var(--cloudflare); margin-left: auto; }
+.picker header .cloud { width: 26px; height: 20px; margin-left: auto; }
 .picker label { display: flex; align-items: center; gap: 10px; padding: 9px 14px; font-family: "Geist Mono", monospace; font-size: 12.5px; }
 .box { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--line-2); display: grid; place-items: center; flex: none; }
 .box.on { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
@@ -302,11 +302,11 @@ h2 code, h3 code { font-family: inherit; }
 
 /* Steps */
 .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; list-style: none; counter-reset: step; padding: 0 var(--gutter); }
-.steps li { counter-increment: step; display: grid; gap: 10px; align-content: start; padding: 24px; border-radius: 14px; background: var(--bg-2); border: 1px solid var(--line); }
+.steps li { min-width: 0; grid-template-columns: minmax(0, 1fr); counter-increment: step; display: grid; gap: 10px; align-content: start; padding: 24px; border-radius: 14px; background: var(--bg-2); border: 1px solid var(--line); }
 .steps li::before { content: counter(step); width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--brand); color: var(--brand-ink); font-weight: 600; font-size: 13px; }
 .steps h3 { font-size: 19px; letter-spacing: -0.02em; }
 .steps p { color: var(--muted); font-size: 15px; }
-.steps .install { margin-top: 6px; width: 100%; background: var(--card); }
+.steps .install { display: flex; margin-top: 6px; width: 100%; background: var(--card); }
 
 /* Tour */
 .tour { padding: 0 var(--gutter); }
