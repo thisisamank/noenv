@@ -89,7 +89,7 @@
 <p>For each command, <code>noenv exec</code> does these steps:</p>
 <ol>
   <li>It finds the repository from the current directory.</li>
-  <li>It picks the account for that repository. See <a href="/guides/getting-started#accounts">more than one team</a>.</li>
+  <li>It uses the deployment named in the repository's <code>.noenv</code> file. See <a href="/guides/multiple-accounts">Multiple accounts</a>.</li>
   <li>It removes secrets that your shell loaded for a different repository, so values do not leak between projects.</li>
   <li>It loads the secrets and runs the command. It prints which project it loaded, never the values.</li>
 </ol>
@@ -103,6 +103,7 @@
 
 <h2 id="ci">Scripts and CI</h2>
 <p>The same command works in scripts: <code>noenv exec -- npx wrangler deploy</code>. The machine needs a signed-in noenv session for the account.</p>
+<p>Agents cannot answer the account question in <code>noenv init</code>. They pass the account: <code>noenv init --account acme</code>.</p>
 
 <h2 id="wrangler">Push secrets to a Worker</h2>
 <p><code>noenv wrangler</code> copies secrets from noenv to your Cloudflare Worker with <code>wrangler secret bulk</code>. The values go to Wrangler on stdin, so they never show on screen or land in a file.</p>

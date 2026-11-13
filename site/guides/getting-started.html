@@ -118,13 +118,16 @@ eval "$(noenv shell zsh)"   <span class="c"># or: noenv shell bash</span></code>
 <pre><code><span class="p">~/code/backend ❯</span> noenv init
 <span class="c">Created project github.com/acme/backend</span>
 <span class="c">Created environment development</span>
-<span class="c">Created .noenv, commit it so teammates load this project</span>
+<span class="c">Created .noenv for https://noenv.acme.com, commit it so teammates load this project</span>
 <span class="p">~/code/backend ❯</span> noenv secret set API_KEY
 Value:
 Saved API_KEY as version 1 in github.com/acme/backend (development)
 <span class="ok">noenv: loaded 1 secrets for github.com/acme/backend (development)</span></code></pre>
 <p><code>noenv secret set</code> reads the value without echo, so it does not show on screen or in your shell history.</p>
-<p>Commit the <code>.noenv</code> file. It tells your teammates' shells that the repository uses noenv, so an access problem shows a message instead of silence.</p>
+<p>Commit the <code>.noenv</code> file. It names the deployment and the environment, so your teammates' shells load from the right deployment, and an access problem shows a message instead of silence.</p>
+<pre><code>version = 1
+deployment = "https://noenv.acme.com"
+environment = "development"</code></pre>
 
 <h2 id="check">Check your setup</h2>
 <p>Run <code>noenv status</code>. It shows the deployment, your account, and the current project.</p>
@@ -146,7 +149,7 @@ Saved API_KEY as version 1 in github.com/acme/backend (development)
 </table>
 
 <h2 id="accounts">Work with more than one team</h2>
-<p>Each noenv deployment is one team. To use several deployments on one laptop, add each one as a named account. See <a href="/guides/multiple-accounts">Multiple accounts</a>.</p>
+<p>Each noenv deployment is one team. To use several deployments on one laptop, add each one with <code>noenv account add URL</code>. Then <code>noenv init</code> asks which one a repository uses. See <a href="/guides/multiple-accounts">Multiple accounts</a>.</p>
 
 <nav class="pager" aria-label="More guides"><a class="next" href="/guides/migrate-from-env"><span>Next</span><b>Migrate from .env</b></a></nav>
       </article>

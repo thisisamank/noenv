@@ -89,11 +89,13 @@
 <p>With one deployment, you do not need accounts. <code>NOENV_URL</code> in your shell profile is enough.</p>
 
 <h2 id="add">1. Add each deployment</h2>
-<p>Give each deployment a short name and its URL. After the URL, list the repository prefixes that belong to it:</p>
-<pre><code>noenv account add personal https://noenv.me.dev
-noenv account add acme https://noenv.acme.com github.com/acme
-noenv account add globex https://secrets.globex.io gitlab.globex.io/globex github.com/globex</code></pre>
-<p>A prefix is a host and an optional path, such as <code>github.com/acme</code>. The first account you add becomes the default.</p>
+<p>Add each deployment by its URL:</p>
+<pre><code><span class="p">~ ❯</span> noenv account add https://noenv.acme.com
+Saved account acme (https://noenv.acme.com) as the default
+<span class="p">~ ❯</span> noenv account add https://secrets.globex.io
+Saved account globex (https://secrets.globex.io)</code></pre>
+<p>The deployment reports its team name, and the CLI saves the account under it. So every teammate gets the same name, and nobody has to type one. Admins set the name with <code>TEAM_NAME</code> when they deploy. Without it, the name comes from the Worker's address, for example <code>acme</code> for <code>noenv.acme.com</code>.</p>
+<p>To use your own name, put it after the URL: <code>noenv account add https://noenv.me.dev personal</code>. The first account you add becomes the default.</p>
 
 <h2 id="sign-in">2. Sign in to each account</h2>
 <p>Sign in once per account. Your browser opens, and you approve with the passkey for that deployment:</p>
@@ -101,24 +103,25 @@ noenv account add globex https://secrets.globex.io gitlab.globex.io/globex githu
 noenv auth globex</code></pre>
 <p>You can also skip this step. When you enter a repository of an account you are not signed in to, the shell starts the sign-in for you.</p>
 
-<h2 id="pick">How noenv picks the account</h2>
-<p>For each repository, the CLI picks the account in this order:</p>
-<ol>
-  <li><code>NOENV_ACCOUNT</code> in the shell, if it is set.</li>
-  <li>The longest prefix that matches the git <code>origin</code>.</li>
-  <li>The default account.</li>
-  <li><code>NOENV_URL</code>, so a setup with one deployment keeps working.</li>
-</ol>
-<p>With the accounts above:</p>
-<table>
-  <thead><tr><th>Repository origin</th><th>Account</th><th>Why</th></tr></thead>
-  <tbody>
-    <tr><td><code>github.com/acme/backend</code></td><td>acme</td><td>Matches the prefix <code>github.com/acme</code></td></tr>
-    <tr><td><code>github.com/acmecorp/site</code></td><td>personal</td><td>A prefix matches whole path parts only, so <code>github.com/acme</code> does not match</td></tr>
-    <tr><td><code>gitlab.globex.io/globex/api</code></td><td>globex</td><td>Matches the prefix <code>gitlab.globex.io/globex</code></td></tr>
-    <tr><td><code>github.com/you/blog</code></td><td>personal</td><td>No prefix matches, so the default account is used</td></tr>
-  </tbody>
-</table>
+<h2 id="pick">3. Choose the account for each repository</h2>
+<p>Run <code>noenv init</code> in the repository. With one account, it uses that account. With more than one, it asks:</p>
+<pre><code><span class="p">~/code/acme-backend ❯</span> noenv init
+Which account should this repository use?
+› acme      https://noenv.acme.com
+  globex    https://secrets.globex.io
+  personal  https://noenv.me.dev</code></pre>
+<p>It saves the deployment URL, not the account name, in the repository's <code>.noenv</code> file. Commit the file.</p>
+<pre><code>version = 1
+deployment = "https://noenv.acme.com"
+environment = "development"</code></pre>
+<p>Agents and scripts cannot answer the question. They pass the account: <code>noenv init --account acme</code>.</p>
+
+<h2 id="teammates">Teammates and account names</h2>
+<p>The URL is the same for everyone on the team, so the shell hook, <code>noenv exec</code>, and every other command look for the local account with that URL. One teammate can call it <code>acme</code> and another <code>work</code>. Both load the same secrets. noenv does not guess from the git <code>origin</code>.</p>
+<p>When a teammate clones the repository before they add the deployment, noenv tells them the command:</p>
+<pre><code>noenv: this repository uses the deployment https://noenv.acme.com, add it with `noenv account add https://noenv.acme.com`</code></pre>
+<div class="note"><svg class="icon"><use href="/icons.svg#info"/></svg><div>noenv never connects to a URL from <code>.noenv</code> on its own. A cloned repository cannot point your shell at a server you did not add.</div></div>
+<p>In a repository whose <code>.noenv</code> names no deployment, noenv uses <code>NOENV_ACCOUNT</code>, then the default account, then <code>NOENV_URL</code>. A setup with one deployment keeps working without accounts.</p>
 
 <h2 id="switch">Move between repositories</h2>
 <p>When you <code>cd</code> from a repository of one account to a repository of another, noenv unloads the first set of secrets and loads the second. Values from one team never stay in your shell when you work on another team's code.</p>
@@ -130,25 +133,25 @@ noenv auth globex</code></pre>
 <table>
   <thead><tr><th>Command</th><th>What it does</th></tr></thead>
   <tbody>
-    <tr><td><code>noenv account list</code></td><td>List each account, its URL, its prefixes, and if you are signed in. <code>*</code> marks the default.</td></tr>
-    <tr><td><code>noenv account default NAME</code></td><td>Use NAME for repositories that match no prefix</td></tr>
+    <tr><td><code>noenv account list</code></td><td>List each account, its URL, and if you are signed in. <code>*</code> marks the default.</td></tr>
+    <tr><td><code>noenv account default NAME</code></td><td>Use NAME in repositories whose <code>.noenv</code> names no deployment</td></tr>
     <tr><td><code>noenv account remove NAME</code></td><td>Forget an account. Its key stays on this machine, so adding it again keeps your access.</td></tr>
     <tr><td><code>noenv status</code></td><td>Show which account the current repository uses</td></tr>
   </tbody>
 </table>
 <pre><code><span class="p">~ ❯</span> noenv account list
 * personal  https://noenv.me.dev  signed in
-  acme  https://noenv.acme.com  signed in  github.com/acme
-  globex  https://secrets.globex.io  signed out  gitlab.globex.io/globex, github.com/globex</code></pre>
+  acme  https://noenv.acme.com  signed in
+  globex  https://secrets.globex.io  signed out</code></pre>
 
 <h2 id="override">Use another account for one shell</h2>
 <p>To use a different account for one terminal session, set <code>NOENV_ACCOUNT</code>:</p>
 <pre><code>export NOENV_ACCOUNT=globex</code></pre>
-<p>This overrides the prefixes and the default until you close the terminal or run <code>unset NOENV_ACCOUNT</code>.</p>
+<p>It applies only in repositories whose <code>.noenv</code> names no deployment, until you close the terminal or run <code>unset NOENV_ACCOUNT</code>. A deployment in <code>.noenv</code> always wins.</p>
 
 <h2 id="storage">Where accounts are stored</h2>
 <p>The list of accounts is in <code>~/.config/noenv/accounts.json</code>. Each deployment has its own folder next to it, with its own session and key. Signing out of one account does not affect the others.</p>
-<div class="note"><svg class="icon"><use href="/icons.svg#info"/></svg><div>Named accounts need CLI 0.2.0 or newer. Run <code>npm install -g @thisisamank/noenv-cli</code> to update.</div></div>
+<div class="note"><svg class="icon"><use href="/icons.svg#info"/></svg><div>The deployment in <code>.noenv</code> needs CLI 0.3.0 or newer. Team names need a deployment that runs the current Worker. Run <code>npm install -g @thisisamank/noenv-cli</code> to update.</div></div>
 
 <nav class="pager" aria-label="More guides"><a href="/guides/migrate-from-env"><span>Previous</span><b>Migrate from .env</b></a><a class="next" href="/guides/agents-ci-and-workers"><span>Next</span><b>Agents, CI, and Workers</b></a></nav>
       </article>
