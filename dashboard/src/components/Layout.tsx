@@ -1,8 +1,9 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { displayName } from "../format.ts";
 import { href, type Route } from "../router.ts";
 import type { Me } from "../types.ts";
 import { signOut } from "../passkeys.ts";
+import { applyTheme, storedTheme, type Theme } from "../theme.ts";
 import { Avatar } from "./Avatar.tsx";
 import { Icon, type IconName } from "./Icon.tsx";
 
@@ -16,12 +17,20 @@ const NAV: NavItem[] = [
   { page: "devices", route: { page: "devices" }, icon: "laptop", label: "Devices", adminOnly: true },
 ];
 
+const THEMES: { value: Theme; icon: IconName; label: string }[] = [
+  { value: "system", icon: "monitor", label: "System theme" },
+  { value: "light", icon: "sun", label: "Light theme" },
+  { value: "dark", icon: "moon", label: "Dark theme" },
+];
+
 const SECTION: Partial<Record<Route["page"], Route["page"]>> = { project: "projects", secret: "projects" };
 
 type LayoutProps = { me: Me; route: Route; attention: number; onSignedOut: () => void; children: ReactNode };
 
 export function Layout({ me, route, attention, onSignedOut, children }: LayoutProps) {
   const current = SECTION[route.page] ?? route.page;
+  const [theme, setTheme] = useState(storedTheme);
+  const choose = (next: Theme) => (setTheme(next), applyTheme(next));
 
   return (
     <>
@@ -40,6 +49,13 @@ export function Layout({ me, route, attention, onSignedOut, children }: LayoutPr
           </a>
         ))}
         <div className="side-foot">
+          <div className="theme" role="group" aria-label="Theme">
+            {THEMES.map((item) => (
+              <button key={item.value} aria-label={item.label} title={item.label} aria-pressed={theme === item.value} onClick={() => choose(item.value)}>
+                <Icon name={item.icon} />
+              </button>
+            ))}
+          </div>
           <Avatar email={me.email} />
           <div>
             <b>{displayName(me.email)}</b>
