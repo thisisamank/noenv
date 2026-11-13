@@ -1,4 +1,6 @@
-import { basename } from "node:path";
+import { writeFile } from "node:fs/promises";
+import { basename, join } from "node:path";
+import { CONFIG_FILE } from "@noenv/config";
 import { exportPublicKey, generateKeyPair, importPublicKey, wrapPrivateKey } from "@noenv/crypto";
 import { api, ApiError, environmentPath, repoPath } from "../api.ts";
 import { fetchBundle } from "../bundle.ts";
@@ -29,6 +31,13 @@ export async function initCommand(): Promise<void> {
   } catch (error) {
     if (!(error instanceof ApiError && error.status === 409)) throw error;
     console.log(`Environment ${target.environment} already exists`);
+  }
+
+  try {
+    await writeFile(join(target.root, CONFIG_FILE), `version = 1\nenvironment = "${target.environment}"\n`, { flag: "wx" });
+    console.log(`Created ${CONFIG_FILE}, commit it so teammates load this project`);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
   }
 }
 

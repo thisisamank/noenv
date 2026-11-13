@@ -18,7 +18,7 @@ const USAGE = `usage: noenv <command>
   account remove NAME        forget an account
   auth [NAME]                sign in to an account (default: the one for this repo)
   status                     show the account, user, and project
-  init                       create the project and environment for this repository
+  init                       create the project, the environment, and the .noenv file
   exec -- COMMAND            run COMMAND with this repository's secrets, for agents,
                              scripts, and CI; it picks the account and project from
                              the current directory
