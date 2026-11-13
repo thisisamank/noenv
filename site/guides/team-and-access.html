@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<title>Team and access — noenv guides</title>
+<meta name="description" content="Invite people, give them a role, share environment keys, and remove access.">
+<link rel="canonical" href="https://noenv.thisisamank.in/guides/team-and-access">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="alternate" type="application/atom+xml" title="noenv changelog" href="/changelog.xml">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="noenv">
+<meta property="og:url" content="https://noenv.thisisamank.in/guides/team-and-access">
+<meta property="og:title" content="Team and access — noenv guides">
+<meta property="og:description" content="Invite people, give them a role, share environment keys, and remove access.">
+<meta property="og:image" content="https://noenv.thisisamank.in/assets/tour.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<script>try{var t=localStorage.getItem("noenv-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="preload" href="/assets/geist.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="frame">
+    <a class="logo" href="/" aria-label="noenv home"><span class="mark"><svg class="icon"><use href="/icons.svg#key"/></svg></span>noenv</a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="/guides" aria-current="page">Guides</a>
+      <a href="/changelog">Changelog</a>
+      <a href="https://github.com/thisisamank/noenv">GitHub</a>
+    </nav>
+    <div class="header-end">
+      <button class="icon-btn theme-toggle" type="button" data-mode="system" aria-label="Change theme"><svg class="icon auto"><use href="/icons.svg#monitor"/></svg><svg class="icon sun"><use href="/icons.svg#sun"/></svg><svg class="icon moon"><use href="/icons.svg#moon"/></svg></button>
+      <a class="btn small primary" href="https://deploy.workers.cloudflare.com/?url=https://github.com/thisisamank/noenv">Deploy</a>
+    </div>
+  </div>
+  <nav class="mobile-nav" aria-label="Main">
+    <a href="/guides" aria-current="page">Guides</a>
+      <a href="/changelog">Changelog</a>
+      <a href="https://github.com/thisisamank/noenv">GitHub</a>
+    <a href="https://deploy.workers.cloudflare.com/?url=https://github.com/thisisamank/noenv">Deploy</a>
+  </nav>
+</header>
+
+<main id="main">
+  <div class="frame">
+    <div class="doc-head">
+      <div class="crumbs"><a href="/guides">Guides</a><svg class="icon"><use href="/icons.svg#chevron"/></svg><span>Team and access</span></div>
+      <h1>Team and access</h1>
+      <p>Invite people, give them a role, share environment keys, and remove access.</p>
+    </div>
+    <div class="doc">
+      <aside class="doc-nav">
+        <nav aria-label="Guides">
+          <div>
+            <h2>Guides</h2>
+            <ul>
+<li><a href="/guides/getting-started">Getting started</a></li>
+<li><a href="/guides/migrate-from-env">Migrate from .env</a></li>
+<li><a href="/guides/agents-ci-and-workers">Agents, CI, and Workers</a></li>
+<li><a href="/guides/team-and-access" aria-current="page">Team and access</a></li>
+<li><a href="/guides/policies-and-devices">Policies and devices</a></li>
+            </ul>
+          </div>
+          <div>
+            <h2>Reference</h2>
+            <ul>
+              <li><a href="/changelog">Changelog</a></li>
+              <li><a href="https://github.com/thisisamank/noenv/blob/main/spec.md">Specification</a></li>
+            </ul>
+          </div>
+        </nav>
+      </aside>
+      <article class="prose">
+
+<h2 id="roles">Roles</h2>
+<table>
+  <thead><tr><th>Role</th><th>Can do</th></tr></thead>
+  <tbody>
+    <tr><td><strong>reader</strong></td><td>Load secrets into the shell</td></tr>
+    <tr><td><strong>editor</strong></td><td>Load and write secrets, and roll back versions</td></tr>
+    <tr><td><strong>admin</strong></td><td>All of the above, and manage members and policies</td></tr>
+  </tbody>
+</table>
+
+<h2 id="invite">1. Invite a person</h2>
+<p>Invite from <strong>Team</strong> in the dashboard, from the <strong>Members</strong> card of a project, or from the CLI:</p>
+<pre><code>noenv invite sam@acme.com</code></pre>
+<p>You get a link to send. If <a href="#email">invitation emails</a> are on, noenv emails the link for you.</p>
+
+<h2 id="join">2. The person joins</h2>
+<ol>
+  <li>They open the link and create a passkey.</li>
+  <li>They install the CLI: <code>npm install -g @thisisamank/noenv-cli</code>.</li>
+  <li>They <a href="/guides/getting-started#connect">connect their shell</a> and approve the terminal.</li>
+</ol>
+
+<h2 id="grant">3. Share the environment key</h2>
+<p>Run <code>noenv grant</code> in the repository, after the person has connected their shell:</p>
+<pre><code><span class="p">~/code/api ❯</span> noenv grant sam@acme.com editor</code></pre>
+<p>This gives the role on the project and shares the key for the current environment. Each environment has its own key. To share production, select it first:</p>
+<pre><code>NOENV_ENVIRONMENT=production noenv grant sam@acme.com reader</code></pre>
+<div class="note"><svg class="icon"><use href="/icons.svg#info"/></svg><div>Key sharing needs your private key, which lives only in <code>~/.config/noenv</code> on your machine. That is why <code>noenv grant</code> runs in the CLI and not in the dashboard. The dashboard shows who holds a key for each environment.</div></div>
+
+<h2 id="remove">Remove a person</h2>
+<p>Remove them from the project <strong>Members</strong> card, or run:</p>
+<pre><code>noenv revoke sam@acme.com</code></pre>
+<div class="note warn"><svg class="icon"><use href="/icons.svg#alert"/></svg><div>Removing access stops future loads. It cannot take back values that the person already loaded in their shell. After you remove someone, change the important values with <code>noenv secret set</code>.</div></div>
+
+<h2 id="email">Invitation emails</h2>
+<p>noenv can email invites through Cloudflare Email Sending. Without it, you send the link yourself.</p>
+<ol>
+  <li>Onboard your domain: <code>npx wrangler email sending enable example.com</code>.</li>
+  <li>Set the sender address: <code>npx wrangler secret put EMAIL_FROM</code>, for example <code>noenv@example.com</code>.</li>
+</ol>
+
+<nav class="pager" aria-label="More guides"><a href="/guides/agents-ci-and-workers"><span>Previous</span><b>Agents, CI, and Workers</b></a><a class="next" href="/guides/policies-and-devices"><span>Next</span><b>Policies and devices</b></a></nav>
+      </article>
+    </div>
+  </div>
+</main>
+<footer class="site-footer">
+  <div class="frame">
+    <div>
+      <a class="logo" href="/"><span class="mark"><svg class="icon"><use href="/icons.svg#key"/></svg></span>noenv</a>
+      <p>Open-source secrets manager that replaces <code>.env</code> files. Self-hosted on Cloudflare.</p>
+    </div>
+    <div>
+      <h3>Product</h3>
+      <ul>
+        <li><a href="/guides">Guides</a></li>
+        <li><a href="/changelog">Changelog</a></li>
+        <li><a href="/#tour">Tour</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>Source</h3>
+      <ul>
+        <li><a href="https://github.com/thisisamank/noenv">GitHub</a></li>
+        <li><a href="https://www.npmjs.com/package/@thisisamank/noenv-cli">npm</a></li>
+        <li><a href="https://github.com/thisisamank/noenv/blob/main/spec.md">Specification</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<div class="toast" role="status" id="toast">Copied</div>
+<script src="/site.js" defer></script>
+</body>
+</html>

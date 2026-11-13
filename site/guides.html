@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<title>Guides — noenv</title>
+<meta name="description" content="Guides for noenv: get started, migrate from .env files, manage your team, and set policies.">
+<link rel="canonical" href="https://noenv.thisisamank.in/guides">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="alternate" type="application/atom+xml" title="noenv changelog" href="/changelog.xml">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="noenv">
+<meta property="og:url" content="https://noenv.thisisamank.in/guides">
+<meta property="og:title" content="Guides — noenv">
+<meta property="og:description" content="Guides for noenv: get started, migrate from .env files, manage your team, and set policies.">
+<meta property="og:image" content="https://noenv.thisisamank.in/assets/tour.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<script>try{var t=localStorage.getItem("noenv-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="preload" href="/assets/geist.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="frame">
+    <a class="logo" href="/" aria-label="noenv home"><span class="mark"><svg class="icon"><use href="/icons.svg#key"/></svg></span>noenv</a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="/guides" aria-current="page">Guides</a>
+      <a href="/changelog">Changelog</a>
+      <a href="https://github.com/thisisamank/noenv">GitHub</a>
+    </nav>
+    <div class="header-end">
+      <button class="icon-btn theme-toggle" type="button" data-mode="system" aria-label="Change theme"><svg class="icon auto"><use href="/icons.svg#monitor"/></svg><svg class="icon sun"><use href="/icons.svg#sun"/></svg><svg class="icon moon"><use href="/icons.svg#moon"/></svg></button>
+      <a class="btn small primary" href="https://deploy.workers.cloudflare.com/?url=https://github.com/thisisamank/noenv">Deploy</a>
+    </div>
+  </div>
+  <nav class="mobile-nav" aria-label="Main">
+    <a href="/guides" aria-current="page">Guides</a>
+      <a href="/changelog">Changelog</a>
+      <a href="https://github.com/thisisamank/noenv">GitHub</a>
+    <a href="https://deploy.workers.cloudflare.com/?url=https://github.com/thisisamank/noenv">Deploy</a>
+  </nav>
+</header>
+
+<main id="main">
+  <div class="frame">
+    <div class="doc-head">
+      <h1>Guides</h1>
+      <p>Everything from the first deploy to team-wide <code>.env</code> rules. Start at the top if you are new.</p>
+    </div>
+    <div class="guide-grid">
+      <a href="/guides/getting-started"><span class="meta">10 minutes</span><h2>Getting started<svg class="icon"><use href="/icons.svg#arrow"/></svg></h2><p>Deploy noenv, create your admin passkey, connect your shell, and load your first secret.</p></a>
+      <a href="/guides/migrate-from-env"><span class="meta">5 minutes</span><h2>Migrate from .env<svg class="icon"><use href="/icons.svg#arrow"/></svg></h2><p>Move the .env files of a repository into noenv, verify every value, and delete the files safely.</p></a>
+      <a href="/guides/agents-ci-and-workers"><span class="meta">6 minutes</span><h2>Agents, CI, and Workers<svg class="icon"><use href="/icons.svg#arrow"/></svg></h2><p>Give coding agents and scripts their secrets with noenv exec, and push secrets to Cloudflare Workers with noenv wrangler.</p></a>
+      <a href="/guides/team-and-access"><span class="meta">5 minutes</span><h2>Team and access<svg class="icon"><use href="/icons.svg#arrow"/></svg></h2><p>Invite people, give them a role, share environment keys, and remove access.</p></a>
+      <a href="/guides/policies-and-devices"><span class="meta">7 minutes</span><h2>Policies and devices<svg class="icon"><use href="/icons.svg#arrow"/></svg></h2><p>Set .env rules, a minimum CLI version, and session expiry, and check which devices comply.</p></a>
+    </div>
+    <div class="closing">
+      <h2>Rather see it first?</h2>
+      <p class="lede">The 40-second tour shows the whole setup.</p>
+      <div class="actions"><a class="btn primary" href="/#tour">Watch the tour</a><a class="btn" href="https://github.com/thisisamank/noenv">Read the source</a></div>
+    </div>
+  </div>
+</main>
+<footer class="site-footer">
+  <div class="frame">
+    <div>
+      <a class="logo" href="/"><span class="mark"><svg class="icon"><use href="/icons.svg#key"/></svg></span>noenv</a>
+      <p>Open-source secrets manager that replaces <code>.env</code> files. Self-hosted on Cloudflare.</p>
+    </div>
+    <div>
+      <h3>Product</h3>
+      <ul>
+        <li><a href="/guides">Guides</a></li>
+        <li><a href="/changelog">Changelog</a></li>
+        <li><a href="/#tour">Tour</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>Source</h3>
+      <ul>
+        <li><a href="https://github.com/thisisamank/noenv">GitHub</a></li>
+        <li><a href="https://www.npmjs.com/package/@thisisamank/noenv-cli">npm</a></li>
+        <li><a href="https://github.com/thisisamank/noenv/blob/main/spec.md">Specification</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<div class="toast" role="status" id="toast">Copied</div>
+<script src="/site.js" defer></script>
+</body>
+</html>

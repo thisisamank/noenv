@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<title>Agents, CI, and Workers — noenv guides</title>
+<meta name="description" content="Give coding agents and scripts their secrets with noenv exec, and push secrets to Cloudflare Workers with noenv wrangler.">
+<link rel="canonical" href="https://noenv.thisisamank.in/guides/agents-ci-and-workers">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="alternate" type="application/atom+xml" title="noenv changelog" href="/changelog.xml">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="noenv">
+<meta property="og:url" content="https://noenv.thisisamank.in/guides/agents-ci-and-workers">
+<meta property="og:title" content="Agents, CI, and Workers — noenv guides">
+<meta property="og:description" content="Give coding agents and scripts their secrets with noenv exec, and push secrets to Cloudflare Workers with noenv wrangler.">
+<meta property="og:image" content="https://noenv.thisisamank.in/assets/tour.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<script>try{var t=localStorage.getItem("noenv-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="preload" href="/assets/geist.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="frame">
+    <a class="logo" href="/" aria-label="noenv home"><span class="mark"><svg class="icon"><use href="/icons.svg#key"/></svg></span>noenv</a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="/guides" aria-current="page">Guides</a>
+      <a href="/changelog">Changelog</a>
+      <a href="https://github.com/thisisamank/noenv">GitHub</a>
+    </nav>
+    <div class="header-end">
+      <button class="icon-btn theme-toggle" type="button" data-mode="system" aria-label="Change theme"><svg class="icon auto"><use href="/icons.svg#monitor"/></svg><svg class="icon sun"><use href="/icons.svg#sun"/></svg><svg class="icon moon"><use href="/icons.svg#moon"/></svg></button>
+      <a class="btn small primary" href="https://deploy.workers.cloudflare.com/?url=https://github.com/thisisamank/noenv">Deploy</a>
+    </div>
+  </div>
+  <nav class="mobile-nav" aria-label="Main">
+    <a href="/guides" aria-current="page">Guides</a>
+      <a href="/changelog">Changelog</a>
+      <a href="https://github.com/thisisamank/noenv">GitHub</a>
+    <a href="https://deploy.workers.cloudflare.com/?url=https://github.com/thisisamank/noenv">Deploy</a>
+  </nav>
+</header>
+
+<main id="main">
+  <div class="frame">
+    <div class="doc-head">
+      <div class="crumbs"><a href="/guides">Guides</a><svg class="icon"><use href="/icons.svg#chevron"/></svg><span>Agents, CI, and Workers</span></div>
+      <h1>Agents, CI, and Workers</h1>
+      <p>Give coding agents and scripts their secrets with noenv exec, and push secrets to Cloudflare Workers with noenv wrangler.</p>
+    </div>
+    <div class="doc">
+      <aside class="doc-nav">
+        <nav aria-label="Guides">
+          <div>
+            <h2>Guides</h2>
+            <ul>
+<li><a href="/guides/getting-started">Getting started</a></li>
+<li><a href="/guides/migrate-from-env">Migrate from .env</a></li>
+<li><a href="/guides/agents-ci-and-workers" aria-current="page">Agents, CI, and Workers</a></li>
+<li><a href="/guides/team-and-access">Team and access</a></li>
+<li><a href="/guides/policies-and-devices">Policies and devices</a></li>
+            </ul>
+          </div>
+          <div>
+            <h2>Reference</h2>
+            <ul>
+              <li><a href="/changelog">Changelog</a></li>
+              <li><a href="https://github.com/thisisamank/noenv/blob/main/spec.md">Specification</a></li>
+            </ul>
+          </div>
+        </nav>
+      </aside>
+      <article class="prose">
+
+<div class="note"><svg class="icon"><use href="/icons.svg#info"/></svg><div>These commands come in the next CLI release. They are in the repository now.</div></div>
+
+<h2 id="why">Why agents need their own command</h2>
+<p>Coding agents such as Claude Code and Codex run each command in a fresh shell. The <code>cd</code> hook never runs for them, so the secrets never load. <code>noenv exec</code> loads them for one command.</p>
+
+<h2 id="exec">Run a command with <code>noenv exec</code></h2>
+<pre><code><span class="p">~/code/api ❯</span> noenv exec -- npm run dev
+<span class="ok">noenv: loaded 12 secrets for github.com/acme/api (development)</span></code></pre>
+<p>For each command, <code>noenv exec</code> does these steps:</p>
+<ol>
+  <li>It finds the repository from the current directory.</li>
+  <li>It picks the account for that repository. See <a href="/guides/getting-started#accounts">more than one team</a>.</li>
+  <li>It removes secrets that your shell loaded for a different repository, so values do not leak between projects.</li>
+  <li>It loads the secrets and runs the command. It prints which project it loaded, never the values.</li>
+</ol>
+<p>Outside a noenv project, it runs the command without secrets. If the server cannot be reached, it uses the last encrypted copy on your machine and says so.</p>
+
+<h2 id="instructions">Tell your agent</h2>
+<p>Add this line to <code>CLAUDE.md</code> or <code>AGENTS.md</code> in the repository:</p>
+<pre><code>Run commands that need environment variables with `noenv exec -- &lt;command&gt;`. Do not create .env files.</code></pre>
+<p>To let an agent save a secret without a prompt, pipe the value:</p>
+<pre><code>printf '%s' "$VALUE" | noenv secret set KEY</code></pre>
+
+<h2 id="ci">Scripts and CI</h2>
+<p>The same command works in scripts: <code>noenv exec -- npx wrangler deploy</code>. The machine needs a signed-in noenv session for the account.</p>
+
+<h2 id="wrangler">Push secrets to a Worker</h2>
+<p><code>noenv wrangler</code> copies secrets from noenv to your Cloudflare Worker with <code>wrangler secret bulk</code>. The values go to Wrangler on stdin, so they never show on screen or land in a file.</p>
+<pre><code>noenv wrangler                      <span class="c"># pick the secrets in a list</span>
+noenv wrangler STRIPE_KEY API_KEY   <span class="c"># push these, no list</span></code></pre>
+<p>In the list, move with the arrow keys or <code>j</code> and <code>k</code>. Press space to select, <code>a</code> to select all, enter to push, and esc to cancel.</p>
+<pre><code><span class="p">~/code/api ❯</span> noenv wrangler
+Push secrets from github.com/acme/api (production) to Wrangler
+› [x] STRIPE_KEY
+  [x] RESEND_API_KEY
+  [ ] DATABASE_URL
+<span class="c">2 of 3 selected · space select · a all · enter confirm · esc cancel</span></code></pre>
+
+<h2 id="auto-push">Push on every change</h2>
+<p>List the keys in <code>.noenv</code>. noenv pushes them after each <code>noenv secret set</code> and <code>noenv secret rollback</code>:</p>
+<pre><code>[wrangler]
+secrets = ["STRIPE_KEY", "API_KEY"]
+environment = "production"   <span class="c"># optional: the noenv environment to copy from</span>
+env = "staging"              <span class="c"># optional: passed to wrangler as --env</span></code></pre>
+<p>These keys start selected in the list. Without a terminal, for example in CI, <code>noenv wrangler</code> pushes this list. The CLI uses the <code>wrangler</code> in the repository's <code>node_modules</code>, or the one on your <code>PATH</code>.</p>
+<div class="note warn"><svg class="icon"><use href="/icons.svg#alert"/></svg><div>Changes made in the dashboard do not push to Wrangler. Run <code>noenv wrangler</code> after them.</div></div>
+
+<nav class="pager" aria-label="More guides"><a href="/guides/migrate-from-env"><span>Previous</span><b>Migrate from .env</b></a><a class="next" href="/guides/team-and-access"><span>Next</span><b>Team and access</b></a></nav>
+      </article>
+    </div>
+  </div>
+</main>
+<footer class="site-footer">
+  <div class="frame">
+    <div>
+      <a class="logo" href="/"><span class="mark"><svg class="icon"><use href="/icons.svg#key"/></svg></span>noenv</a>
+      <p>Open-source secrets manager that replaces <code>.env</code> files. Self-hosted on Cloudflare.</p>
+    </div>
+    <div>
+      <h3>Product</h3>
+      <ul>
+        <li><a href="/guides">Guides</a></li>
+        <li><a href="/changelog">Changelog</a></li>
+        <li><a href="/#tour">Tour</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>Source</h3>
+      <ul>
+        <li><a href="https://github.com/thisisamank/noenv">GitHub</a></li>
+        <li><a href="https://www.npmjs.com/package/@thisisamank/noenv-cli">npm</a></li>
+        <li><a href="https://github.com/thisisamank/noenv/blob/main/spec.md">Specification</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<div class="toast" role="status" id="toast">Copied</div>
+<script src="/site.js" defer></script>
+</body>
+</html>

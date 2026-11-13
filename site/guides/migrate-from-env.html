@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<title>Migrate from .env — noenv guides</title>
+<meta name="description" content="Move the .env files of a repository into noenv, verify every value, and delete the files safely.">
+<link rel="canonical" href="https://noenv.thisisamank.in/guides/migrate-from-env">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="alternate" type="application/atom+xml" title="noenv changelog" href="/changelog.xml">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="noenv">
+<meta property="og:url" content="https://noenv.thisisamank.in/guides/migrate-from-env">
+<meta property="og:title" content="Migrate from .env — noenv guides">
+<meta property="og:description" content="Move the .env files of a repository into noenv, verify every value, and delete the files safely.">
+<meta property="og:image" content="https://noenv.thisisamank.in/assets/tour.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<script>try{var t=localStorage.getItem("noenv-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="preload" href="/assets/geist.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="frame">
+    <a class="logo" href="/" aria-label="noenv home"><span class="mark"><svg class="icon"><use href="/icons.svg#key"/></svg></span>noenv</a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="/guides" aria-current="page">Guides</a>
+      <a href="/changelog">Changelog</a>
+      <a href="https://github.com/thisisamank/noenv">GitHub</a>
+    </nav>
+    <div class="header-end">
+      <button class="icon-btn theme-toggle" type="button" data-mode="system" aria-label="Change theme"><svg class="icon auto"><use href="/icons.svg#monitor"/></svg><svg class="icon sun"><use href="/icons.svg#sun"/></svg><svg class="icon moon"><use href="/icons.svg#moon"/></svg></button>
+      <a class="btn small primary" href="https://deploy.workers.cloudflare.com/?url=https://github.com/thisisamank/noenv">Deploy</a>
+    </div>
+  </div>
+  <nav class="mobile-nav" aria-label="Main">
+    <a href="/guides" aria-current="page">Guides</a>
+      <a href="/changelog">Changelog</a>
+      <a href="https://github.com/thisisamank/noenv">GitHub</a>
+    <a href="https://deploy.workers.cloudflare.com/?url=https://github.com/thisisamank/noenv">Deploy</a>
+  </nav>
+</header>
+
+<main id="main">
+  <div class="frame">
+    <div class="doc-head">
+      <div class="crumbs"><a href="/guides">Guides</a><svg class="icon"><use href="/icons.svg#chevron"/></svg><span>Migrate from .env</span></div>
+      <h1>Migrate from .env</h1>
+      <p>Move the .env files of a repository into noenv, verify every value, and delete the files safely.</p>
+    </div>
+    <div class="doc">
+      <aside class="doc-nav">
+        <nav aria-label="Guides">
+          <div>
+            <h2>Guides</h2>
+            <ul>
+<li><a href="/guides/getting-started">Getting started</a></li>
+<li><a href="/guides/migrate-from-env" aria-current="page">Migrate from .env</a></li>
+<li><a href="/guides/agents-ci-and-workers">Agents, CI, and Workers</a></li>
+<li><a href="/guides/team-and-access">Team and access</a></li>
+<li><a href="/guides/policies-and-devices">Policies and devices</a></li>
+            </ul>
+          </div>
+          <div>
+            <h2>Reference</h2>
+            <ul>
+              <li><a href="/changelog">Changelog</a></li>
+              <li><a href="https://github.com/thisisamank/noenv/blob/main/spec.md">Specification</a></li>
+            </ul>
+          </div>
+        </nav>
+      </aside>
+      <article class="prose">
+
+<h2 id="what">What <code>noenv migrate</code> does</h2>
+<ol>
+  <li>It finds the <code>.env</code> files in the repository.</li>
+  <li>It encrypts each value on your machine and uploads it to the current environment.</li>
+  <li>It reads every value back and compares it with the file.</li>
+  <li>When all values match, it asks if it can delete the file.</li>
+</ol>
+<p>By default it reads <code>.env</code> and <code>.env.*</code>. It skips <code>.env.example</code>, <code>.env.sample</code>, <code>.env.template</code>, and <code>.env.*.example</code>. Admins can change these patterns in the <a href="/guides/policies-and-devices#dotenv">.env policy</a>.</p>
+
+<h2 id="steps">Migrate a repository</h2>
+<ol>
+  <li>Go to the repository: <code>cd ~/code/api</code>.</li>
+  <li>If the repository has no project yet, run <code>noenv init</code>.</li>
+  <li>Run <code>noenv migrate</code>.</li>
+  <li>Read the result for each file. Type <code>y</code> to delete a file that noenv has stored.</li>
+</ol>
+<pre><code><span class="p">~/code/api ❯</span> noenv migrate
+.env: 12 values are stored in noenv
+Delete .env? [y/N] y
+.env: deleted
+<span class="ok">noenv: loaded 12 secrets for github.com/acme/api (development)</span></code></pre>
+
+<h2 id="safety">When noenv keeps a file</h2>
+<p>noenv never deletes a file that it could not fully store. It keeps the file in these cases:</p>
+<table>
+  <thead><tr><th>Output</th><th>Cause</th><th>What to do</th></tr></thead>
+  <tbody>
+    <tr><td><code>kept, values differ from noenv for KEY</code></td><td>Your team already set <code>KEY</code> to a different value. noenv does not overwrite it.</td><td>Decide which value is correct. Set it with <code>noenv secret set KEY</code>, then run migrate again.</td></tr>
+    <tr><td><code>skipped, invalid names: …</code></td><td>The file has names that are not valid variable names.</td><td>Fix the names in the file, then run migrate again.</td></tr>
+    <tr><td><code>kept, could not verify the upload</code></td><td>A value did not read back the same.</td><td>Run migrate again. Check your connection.</td></tr>
+    <tr><td><code>kept, the file changed</code></td><td>The file changed while migrate ran.</td><td>Run migrate again.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="environments">Staging and production files</h2>
+<p>migrate uploads into the current environment. The default is <code>development</code>. To migrate a staging file, select staging first:</p>
+<pre><code>NOENV_ENVIRONMENT=staging noenv migrate</code></pre>
+<p><code>noenv init</code> creates a <code>.noenv</code> file in the repository. Edit it to make the repository always use an environment, or to list the secrets it needs:</p>
+<pre><code>version = 1
+environment = "staging"
+
+[secrets]
+required = ["DATABASE_URL", "STRIPE_KEY"]</code></pre>
+<p>The <code>.noenv</code> file holds no secret values, so you can commit it. When a required secret is missing, the shell prints <code>missing required secrets: …</code>.</p>
+
+<h2 id="team">Move the whole team</h2>
+<p>After you migrate, ask your teammates to delete their own copies. To make this a rule, set the <code>.env</code> policy to <strong>migrate</strong> or <strong>delete</strong>. See <a href="/guides/policies-and-devices">Policies and devices</a>.</p>
+
+<nav class="pager" aria-label="More guides"><a href="/guides/getting-started"><span>Previous</span><b>Getting started</b></a><a class="next" href="/guides/agents-ci-and-workers"><span>Next</span><b>Agents, CI, and Workers</b></a></nav>
+      </article>
+    </div>
+  </div>
+</main>
+<footer class="site-footer">
+  <div class="frame">
+    <div>
+      <a class="logo" href="/"><span class="mark"><svg class="icon"><use href="/icons.svg#key"/></svg></span>noenv</a>
+      <p>Open-source secrets manager that replaces <code>.env</code> files. Self-hosted on Cloudflare.</p>
+    </div>
+    <div>
+      <h3>Product</h3>
+      <ul>
+        <li><a href="/guides">Guides</a></li>
+        <li><a href="/changelog">Changelog</a></li>
+        <li><a href="/#tour">Tour</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>Source</h3>
+      <ul>
+        <li><a href="https://github.com/thisisamank/noenv">GitHub</a></li>
+        <li><a href="https://www.npmjs.com/package/@thisisamank/noenv-cli">npm</a></li>
+        <li><a href="https://github.com/thisisamank/noenv/blob/main/spec.md">Specification</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<div class="toast" role="status" id="toast">Copied</div>
+<script src="/site.js" defer></script>
+</body>
+</html>

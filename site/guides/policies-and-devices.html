@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<title>Policies and devices — noenv guides</title>
+<meta name="description" content="Set .env rules, a minimum CLI version, and session expiry, and check which devices comply.">
+<link rel="canonical" href="https://noenv.thisisamank.in/guides/policies-and-devices">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="alternate" type="application/atom+xml" title="noenv changelog" href="/changelog.xml">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="noenv">
+<meta property="og:url" content="https://noenv.thisisamank.in/guides/policies-and-devices">
+<meta property="og:title" content="Policies and devices — noenv guides">
+<meta property="og:description" content="Set .env rules, a minimum CLI version, and session expiry, and check which devices comply.">
+<meta property="og:image" content="https://noenv.thisisamank.in/assets/tour.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<script>try{var t=localStorage.getItem("noenv-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="preload" href="/assets/geist.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="frame">
+    <a class="logo" href="/" aria-label="noenv home"><span class="mark"><svg class="icon"><use href="/icons.svg#key"/></svg></span>noenv</a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="/guides" aria-current="page">Guides</a>
+      <a href="/changelog">Changelog</a>
+      <a href="https://github.com/thisisamank/noenv">GitHub</a>
+    </nav>
+    <div class="header-end">
+      <button class="icon-btn theme-toggle" type="button" data-mode="system" aria-label="Change theme"><svg class="icon auto"><use href="/icons.svg#monitor"/></svg><svg class="icon sun"><use href="/icons.svg#sun"/></svg><svg class="icon moon"><use href="/icons.svg#moon"/></svg></button>
+      <a class="btn small primary" href="https://deploy.workers.cloudflare.com/?url=https://github.com/thisisamank/noenv">Deploy</a>
+    </div>
+  </div>
+  <nav class="mobile-nav" aria-label="Main">
+    <a href="/guides" aria-current="page">Guides</a>
+      <a href="/changelog">Changelog</a>
+      <a href="https://github.com/thisisamank/noenv">GitHub</a>
+    <a href="https://deploy.workers.cloudflare.com/?url=https://github.com/thisisamank/noenv">Deploy</a>
+  </nav>
+</header>
+
+<main id="main">
+  <div class="frame">
+    <div class="doc-head">
+      <div class="crumbs"><a href="/guides">Guides</a><svg class="icon"><use href="/icons.svg#chevron"/></svg><span>Policies and devices</span></div>
+      <h1>Policies and devices</h1>
+      <p>Set .env rules, a minimum CLI version, and session expiry, and check which devices comply.</p>
+    </div>
+    <div class="doc">
+      <aside class="doc-nav">
+        <nav aria-label="Guides">
+          <div>
+            <h2>Guides</h2>
+            <ul>
+<li><a href="/guides/getting-started">Getting started</a></li>
+<li><a href="/guides/migrate-from-env">Migrate from .env</a></li>
+<li><a href="/guides/agents-ci-and-workers">Agents, CI, and Workers</a></li>
+<li><a href="/guides/team-and-access">Team and access</a></li>
+<li><a href="/guides/policies-and-devices" aria-current="page">Policies and devices</a></li>
+            </ul>
+          </div>
+          <div>
+            <h2>Reference</h2>
+            <ul>
+              <li><a href="/changelog">Changelog</a></li>
+              <li><a href="https://github.com/thisisamank/noenv/blob/main/spec.md">Specification</a></li>
+            </ul>
+          </div>
+        </nav>
+      </aside>
+      <article class="prose">
+
+<h2 id="levels">Where policies apply</h2>
+<p>Admins set policies in the dashboard under <strong>Policies</strong>, at three levels:</p>
+<ol>
+  <li><strong>Organization</strong>: all projects.</li>
+  <li><strong>Project</strong>: one repository.</li>
+  <li><strong>Environment</strong>: one environment of a project.</li>
+</ol>
+<p>A policy set at a lower level replaces the same policy from the level above it.</p>
+
+<h2 id="dotenv">.env policy</h2>
+<p>The CLI checks the repository for <code>.env</code> files each time it loads secrets. The mode decides what happens:</p>
+<table>
+  <thead><tr><th>Mode</th><th>What happens on a developer machine</th></tr></thead>
+  <tbody>
+    <tr><td><strong>warn</strong></td><td>The shell shows a warning. Secrets load. This is the default.</td></tr>
+    <tr><td><strong>block</strong></td><td>Secrets do not load while a matching file exists.</td></tr>
+    <tr><td><strong>migrate</strong></td><td>Secrets do not load until the developer runs <code>noenv migrate</code> and removes the file.</td></tr>
+    <tr><td><strong>delete</strong></td><td>The CLI migrates each file without a prompt, verifies it, and deletes it.</td></tr>
+  </tbody>
+</table>
+<p>Include and exclude patterns pick the files. The defaults are <code>.env</code> and <code>.env.*</code>, without <code>.env.example</code>, <code>.env.sample</code>, <code>.env.template</code>, and <code>.env.*.example</code>.</p>
+<div class="note warn"><svg class="icon"><use href="/icons.svg#alert"/></svg><div><strong>delete</strong> removes files on your team's machines. It deletes only regular files that match the patterns, inside a git repository that noenv knows. It never follows symbolic links, never deletes folders, and keeps any file it could not verify.</div></div>
+
+<h2 id="other">Other policies</h2>
+<table>
+  <thead><tr><th>Policy</th><th>Level</th><th>Default</th><th>Effect</th></tr></thead>
+  <tbody>
+    <tr><td>Minimum CLI version</td><td>Organization</td><td>None</td><td>Older CLIs must update before they load secrets.</td></tr>
+    <tr><td>Session expiry</td><td>Organization</td><td>168 hours</td><td>People approve their terminal again after this time.</td></tr>
+    <tr><td>Minimum role for environment access</td><td>All</td><td>reader</td><td>People below this role cannot load the environment.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="devices">Devices and compliance</h2>
+<p><strong>Devices</strong> lists every signed-in terminal and browser. For each one you see the person, the device name, the CLI version, when it was last seen, and the <code>.env</code> status for each repository and environment.</p>
+<p>Sign a device out from the same page. The person approves the terminal again on the next load.</p>
+<div class="note"><svg class="icon"><use href="/icons.svg#info"/></svg><div>The CLI reports compliance itself. It shows the state of honest machines. It is not proof against a person who controls their own device.</div></div>
+
+<nav class="pager" aria-label="More guides"><a href="/guides/team-and-access"><span>Previous</span><b>Team and access</b></a></nav>
+      </article>
+    </div>
+  </div>
+</main>
+<footer class="site-footer">
+  <div class="frame">
+    <div>
+      <a class="logo" href="/"><span class="mark"><svg class="icon"><use href="/icons.svg#key"/></svg></span>noenv</a>
+      <p>Open-source secrets manager that replaces <code>.env</code> files. Self-hosted on Cloudflare.</p>
+    </div>
+    <div>
+      <h3>Product</h3>
+      <ul>
+        <li><a href="/guides">Guides</a></li>
+        <li><a href="/changelog">Changelog</a></li>
+        <li><a href="/#tour">Tour</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>Source</h3>
+      <ul>
+        <li><a href="https://github.com/thisisamank/noenv">GitHub</a></li>
+        <li><a href="https://www.npmjs.com/package/@thisisamank/noenv-cli">npm</a></li>
+        <li><a href="https://github.com/thisisamank/noenv/blob/main/spec.md">Specification</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<div class="toast" role="status" id="toast">Copied</div>
+<script src="/site.js" defer></script>
+</body>
+</html>

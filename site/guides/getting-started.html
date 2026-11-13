@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<title>Getting started — noenv guides</title>
+<meta name="description" content="Deploy noenv, create your admin passkey, connect your shell, and load your first secret.">
+<link rel="canonical" href="https://noenv.thisisamank.in/guides/getting-started">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="alternate" type="application/atom+xml" title="noenv changelog" href="/changelog.xml">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="noenv">
+<meta property="og:url" content="https://noenv.thisisamank.in/guides/getting-started">
+<meta property="og:title" content="Getting started — noenv guides">
+<meta property="og:description" content="Deploy noenv, create your admin passkey, connect your shell, and load your first secret.">
+<meta property="og:image" content="https://noenv.thisisamank.in/assets/tour.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<script>try{var t=localStorage.getItem("noenv-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}</script>
+<link rel="preload" href="/assets/geist.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="frame">
+    <a class="logo" href="/" aria-label="noenv home"><span class="mark"><svg class="icon"><use href="/icons.svg#key"/></svg></span>noenv</a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="/guides" aria-current="page">Guides</a>
+      <a href="/changelog">Changelog</a>
+      <a href="https://github.com/thisisamank/noenv">GitHub</a>
+    </nav>
+    <div class="header-end">
+      <button class="icon-btn theme-toggle" type="button" data-mode="system" aria-label="Change theme"><svg class="icon auto"><use href="/icons.svg#monitor"/></svg><svg class="icon sun"><use href="/icons.svg#sun"/></svg><svg class="icon moon"><use href="/icons.svg#moon"/></svg></button>
+      <a class="btn small primary" href="https://deploy.workers.cloudflare.com/?url=https://github.com/thisisamank/noenv">Deploy</a>
+    </div>
+  </div>
+  <nav class="mobile-nav" aria-label="Main">
+    <a href="/guides" aria-current="page">Guides</a>
+      <a href="/changelog">Changelog</a>
+      <a href="https://github.com/thisisamank/noenv">GitHub</a>
+    <a href="https://deploy.workers.cloudflare.com/?url=https://github.com/thisisamank/noenv">Deploy</a>
+  </nav>
+</header>
+
+<main id="main">
+  <div class="frame">
+    <div class="doc-head">
+      <div class="crumbs"><a href="/guides">Guides</a><svg class="icon"><use href="/icons.svg#chevron"/></svg><span>Getting started</span></div>
+      <h1>Getting started</h1>
+      <p>Deploy noenv, create your admin passkey, connect your shell, and load your first secret.</p>
+    </div>
+    <div class="doc">
+      <aside class="doc-nav">
+        <nav aria-label="Guides">
+          <div>
+            <h2>Guides</h2>
+            <ul>
+<li><a href="/guides/getting-started" aria-current="page">Getting started</a></li>
+<li><a href="/guides/migrate-from-env">Migrate from .env</a></li>
+<li><a href="/guides/agents-ci-and-workers">Agents, CI, and Workers</a></li>
+<li><a href="/guides/team-and-access">Team and access</a></li>
+<li><a href="/guides/policies-and-devices">Policies and devices</a></li>
+            </ul>
+          </div>
+          <div>
+            <h2>Reference</h2>
+            <ul>
+              <li><a href="/changelog">Changelog</a></li>
+              <li><a href="https://github.com/thisisamank/noenv/blob/main/spec.md">Specification</a></li>
+            </ul>
+          </div>
+        </nav>
+      </aside>
+      <article class="prose">
+
+<h2 id="before">Before you start</h2>
+<ul>
+  <li>A Cloudflare account. The free plan is enough to start.</li>
+  <li>Node.js 22 or newer on each developer machine.</li>
+  <li>macOS or Linux with zsh or bash.</li>
+  <li>A device that supports passkeys: Touch ID, Face ID, Windows Hello, or a security key.</li>
+</ul>
+
+<h2 id="deploy">1. Deploy noenv</h2>
+<p>Click <a href="https://deploy.workers.cloudflare.com/?url=https://github.com/thisisamank/noenv">Deploy to Cloudflare</a>. Cloudflare copies the repository to your account and creates one Worker, one D1 database, and one KV namespace.</p>
+<p>The form asks for two values:</p>
+<table>
+  <thead><tr><th>Variable</th><th>What to enter</th></tr></thead>
+  <tbody>
+    <tr><td><code>ADMIN_EMAIL</code></td><td>Your email address. This person becomes the first admin.</td></tr>
+    <tr><td><code>EMAIL_FROM</code></td><td>A sender address on a domain with Cloudflare Email Sending, to email invites. Otherwise keep <code>none</code>.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="passkey">2. Create your admin passkey</h2>
+<p>Open <code>https://&lt;your-worker&gt;.workers.dev/dashboard/</code> and sign up with the same email. If email is on, the dashboard sends you a setup link instead.</p>
+<div class="note"><svg class="icon"><use href="/icons.svg#info"/></svg><div>With email on, only a person who can read <code>ADMIN_EMAIL</code> can claim the deployment. Without email, claim it right after you deploy.</div></div>
+
+<h2 id="install">3. Install the CLI</h2>
+<pre><code><span class="p">$</span> npm install -g @thisisamank/noenv-cli</code></pre>
+
+<h2 id="connect">4. Connect your shell</h2>
+<p>Add these lines to <code>~/.zshrc</code> or <code>~/.bashrc</code>. The dashboard shows them with your URL filled in.</p>
+<pre><code>export NOENV_URL="https://&lt;your-worker&gt;.workers.dev"
+eval "$(noenv shell zsh)"   <span class="c"># or: noenv shell bash</span></code></pre>
+
+<h2 id="approve">5. Approve the terminal</h2>
+<p>Open a new terminal and <code>cd</code> into a git repository. Your browser opens once. Approve the terminal with your passkey.</p>
+
+<h2 id="project">6. Add a project</h2>
+<p>The git <code>origin</code> of the repository is the project, for example <code>github.com/acme/backend</code>.</p>
+<pre><code><span class="p">~/code/backend ❯</span> noenv init
+<span class="c">Created project github.com/acme/backend</span>
+<span class="c">Created environment development</span>
+<span class="c">Created .noenv, commit it so teammates load this project</span>
+<span class="p">~/code/backend ❯</span> noenv secret set API_KEY
+Value:
+Saved API_KEY as version 1 in github.com/acme/backend (development)
+<span class="ok">noenv: loaded 1 secrets for github.com/acme/backend (development)</span></code></pre>
+<p><code>noenv secret set</code> reads the value without echo, so it does not show on screen or in your shell history.</p>
+<p>Commit the <code>.noenv</code> file. It tells your teammates' shells that the repository uses noenv, so an access problem shows a message instead of silence.</p>
+
+<h2 id="check">Check your setup</h2>
+<p>Run <code>noenv status</code>. It shows the deployment, your account, and the current project.</p>
+
+<h2 id="commands">Everyday commands</h2>
+<table>
+  <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td><code>noenv status</code></td><td>Show the deployment, your account, and the current project</td></tr>
+    <tr><td><code>noenv secret set KEY</code></td><td>Save a secret as a new version</td></tr>
+    <tr><td><code>noenv secret list</code></td><td>List the secrets in this environment</td></tr>
+    <tr><td><code>noenv secret history KEY</code></td><td>List the versions of a secret</td></tr>
+    <tr><td><code>noenv secret rollback KEY VERSION</code></td><td>Restore an older version</td></tr>
+    <tr><td><code>noenv migrate</code></td><td>Move this repository's <code>.env</code> files into noenv</td></tr>
+    <tr><td><code>noenv exec -- CMD</code></td><td>Run a command with this repository's secrets, without the shell hook</td></tr>
+    <tr><td><code>noenv wrangler [KEY…]</code></td><td>Push secrets to your Worker</td></tr>
+    <tr><td><code>noenv grant EMAIL ROLE</code></td><td>Give a person access to this project and share the key</td></tr>
+  </tbody>
+</table>
+
+<h2 id="accounts">Work with more than one team</h2>
+<div class="note"><svg class="icon"><use href="/icons.svg#info"/></svg><div>Named accounts, <code>noenv exec</code>, and <code>noenv wrangler</code> come in the next CLI release. With CLI 0.1.1, use one <code>NOENV_URL</code>.</div></div>
+<p>Each noenv deployment is one team. Add each deployment as a named account, and tell noenv which repositories belong to it:</p>
+<pre><code>noenv account add personal https://noenv.me.dev
+noenv account add acme https://noenv.acme.com github.com/acme
+noenv auth acme   <span class="c"># sign in to each account once</span></code></pre>
+<p>The CLI picks the account for each repository in this order:</p>
+<ol>
+  <li><code>NOENV_ACCOUNT</code> in the shell.</li>
+  <li>The longest repository prefix that matches the git <code>origin</code>.</li>
+  <li>The default account. The first account you add is the default.</li>
+  <li><code>NOENV_URL</code>.</li>
+</ol>
+
+<nav class="pager" aria-label="More guides"><a class="next" href="/guides/migrate-from-env"><span>Next</span><b>Migrate from .env</b></a></nav>
+      </article>
+    </div>
+  </div>
+</main>
+<footer class="site-footer">
+  <div class="frame">
+    <div>
+      <a class="logo" href="/"><span class="mark"><svg class="icon"><use href="/icons.svg#key"/></svg></span>noenv</a>
+      <p>Open-source secrets manager that replaces <code>.env</code> files. Self-hosted on Cloudflare.</p>
+    </div>
+    <div>
+      <h3>Product</h3>
+      <ul>
+        <li><a href="/guides">Guides</a></li>
+        <li><a href="/changelog">Changelog</a></li>
+        <li><a href="/#tour">Tour</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>Source</h3>
+      <ul>
+        <li><a href="https://github.com/thisisamank/noenv">GitHub</a></li>
+        <li><a href="https://www.npmjs.com/package/@thisisamank/noenv-cli">npm</a></li>
+        <li><a href="https://github.com/thisisamank/noenv/blob/main/spec.md">Specification</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<div class="toast" role="status" id="toast">Copied</div>
+<script src="/site.js" defer></script>
+</body>
+</html>
