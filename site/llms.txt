@@ -21,6 +21,7 @@
 
 - [Getting started](https://noenv.thisisamank.in/guides/getting-started): deploy, create the admin passkey, connect the shell, add a project
 - [Migrate from .env](https://noenv.thisisamank.in/guides/migrate-from-env): move .env files into noenv and delete them safely
+- [Multiple accounts](https://noenv.thisisamank.in/guides/multiple-accounts): use one laptop and one CLI with several noenv deployments
 - [Agents, CI, and Workers](https://noenv.thisisamank.in/guides/agents-ci-and-workers): noenv exec for coding agents and CI, noenv wrangler to push secrets to Workers
 - [Team and access](https://noenv.thisisamank.in/guides/team-and-access): invites, roles, noenv grant, removing access
 - [Policies and devices](https://noenv.thisisamank.in/guides/policies-and-devices): .env policy modes, CLI version, session expiry, compliance
