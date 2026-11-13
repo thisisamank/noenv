@@ -84,7 +84,7 @@ td { padding: 10px 16px; border-bottom: 1px solid var(--line); color: var(--mute
 tr:last-child td { border-bottom: 0; }
 td:first-child { white-space: nowrap; }
 td code { font-size: 12.5px; color: var(--text); }
-.guides { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.guides { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .guide { display: grid; gap: 6px; align-content: start; padding: 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg-2); transition: border-color 120ms, background-color 120ms; }
 .guide b { font-weight: 600; font-size: 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .guide b svg { color: var(--faint); width: 14px; height: 14px; transition: transform 160ms var(--ease); }
@@ -136,6 +136,7 @@ function card(iconName: string, title: string, guide: string, body: string): str
 const GUIDES: [string, string, string][] = [
   ["getting-started", "Getting started", "Deploy, sign in, first secret"],
   ["migrate-from-env", "Migrate from .env", "Move files in safely"],
+  ["multiple-accounts", "Multiple accounts", "Several teams, one laptop"],
   ["agents-ci-and-workers", "Agents, CI, Workers", "noenv exec and wrangler"],
   ["team-and-access", "Team and access", "Invites, roles, keys"],
   ["policies-and-devices", "Policies and devices", ".env rules, compliance"],
@@ -207,7 +208,7 @@ ${banner}
   ${card("file", "Move your .env files in", "migrate-from-env", `<p>Uploads every value, reads it back, and only then offers to delete the file.</p>${code("noenv migrate")}`)}
   ${card("bot", "Coding agents and CI", "agents-ci-and-workers", `<p>Agents start a fresh shell for each command. Give them this line in <code>CLAUDE.md</code> or <code>AGENTS.md</code>:</p>${code("Run commands that need environment variables with `noenv exec -- <command>`. Do not create .env files.")}`)}
   ${card("cloud", "Push secrets to a Worker", "agents-ci-and-workers#wrangler", `<p>Pick keys in a list. They go to <code>wrangler secret bulk</code> on stdin, never on screen.</p>${code("noenv wrangler")}`)}
-  ${card("users", "Work with more than one team", "getting-started#accounts", `<p>Save this deployment as a named account, so repositories under a prefix use it.</p>${code(`noenv account add work ${origin} github.com/your-org`)}`)}
+  ${card("users", "Work with more than one team", "multiple-accounts", `<p>Save this deployment as a named account, so repositories under a prefix use it.</p>${code(`noenv account add work ${origin} github.com/your-org`)}`)}
   ${card("dashboard", "Manage it in the browser", "team-and-access", `<p>Projects, secret history and rollback, team invites, <code>.env</code> policies, and device compliance.</p><a class="btn" href="/dashboard/">Open the dashboard ${icon("arrow")}</a>`)}
 </div>
 
