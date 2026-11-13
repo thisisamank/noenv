@@ -45,7 +45,7 @@ Deploy, create a passkey, install the CLI, approve your terminal, and move your 
 
 ## Get started
 
-**1. Deploy.** Click the button above. Enter your email as `ADMIN_EMAIL`. For `EMAIL_FROM`, enter a sender address on a domain with Email Sending enabled to [email invites](#invitation-emails), or keep `none`.
+**1. Deploy.** Click the button above. Enter your email as `ADMIN_EMAIL`. For `EMAIL_FROM`, enter a sender address on a domain with Email Sending enabled to [email invites](#invitation-emails), or keep `none`. Optionally, enter your team's name as `TEAM_NAME`. The CLI saves the deployment under this name on each laptop.
 
 **2. Create your admin passkey.** Open `https://<your-worker>.workers.dev/dashboard/` and sign up with the same email. If [invitation emails](#invitation-emails) are on, the dashboard emails you a setup link instead. Passkeys use Touch ID, Face ID, or a security key. There are no passwords.
 
@@ -135,21 +135,27 @@ Run commands that need environment variables with `noenv exec -- <command>`. Do 
 
 ## Multiple accounts
 
-Each noenv deployment is one team. If you work with more than one team, for example your company, a client, and your own projects, add each deployment as a named account:
+Each noenv deployment is one team. If you work with more than one team, for example your company, a client, and your own projects, add each deployment as an account:
 
 ```sh
-noenv account add personal https://noenv.me.dev
-noenv account add acme https://noenv.acme.com github.com/acme
-noenv account add globex https://secrets.globex.io gitlab.globex.io/globex github.com/globex
-noenv auth acme             # sign in to each account once
+noenv account add https://noenv.acme.com     # saved as "acme", the name the deployment reports
+noenv account add https://noenv.me.dev personal
+noenv auth acme                              # sign in to each account once
 ```
 
-The CLI picks the account for each repository in this order:
+The deployment reports its team name, so every teammate gets the same account name. Admins set it with `TEAM_NAME` when they deploy. Without it, the name comes from the Worker's address. Pass your own name after the URL if you prefer.
 
-1. `NOENV_ACCOUNT=acme` in the shell.
-2. The longest repository prefix that matches the git `origin`. `github.com/acme` matches `github.com/acme/backend` but not `github.com/acmecorp/backend`.
-3. The default account. The first account you add is the default. Change it with `noenv account default NAME`.
-4. `NOENV_URL`, so a setup with one deployment works without accounts.
+`noenv init` saves the deployment URL in the repository's `.noenv` file. With one account, it uses that account. With more than one, it asks which one to use. Agents and scripts pass it: `noenv init --account acme`.
+
+```toml
+version = 1
+deployment = "https://noenv.acme.com"
+environment = "development"
+```
+
+The hook, `noenv exec`, and every other command use the local account with that URL, whatever you named it. The URL is the same for every teammate, so names can differ from laptop to laptop without breaking anything. If no account has that URL, noenv tells you the command to add it. It never connects to a URL from `.noenv` on its own, so a cloned repository cannot point your shell at another server.
+
+In a repository whose `.noenv` names no deployment, noenv uses `NOENV_ACCOUNT`, then the default account (the first one you add, or `noenv account default NAME`), then `NOENV_URL`.
 
 When you `cd` from a repository of one account to a repository of another, noenv unloads the first set of secrets and loads the second. `noenv account list` shows each account and whether you are signed in.
 
