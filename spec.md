@@ -100,13 +100,20 @@ Authentication requirements:
 Identity:
 
 - People sign in with passkeys. NOENV needs no identity provider, SSO, or Cloudflare Access setup.
-- The Deploy to Cloudflare button asks for `ADMIN_EMAIL`. The dashboard then lets only that email create the first admin passkey, and setup closes after the first passkey exists.
+- The Deploy to Cloudflare button asks for `ADMIN_EMAIL` and `SETUP_TOKEN` (a random string of at least 16 characters that the admin makes up). Without email, the dashboard lets only a person who gives both values create the first admin passkey. An email address alone is not a secret, so it never claims a deployment. Setup closes after the first passkey exists. If `SETUP_TOKEN` is missing or too short, setup stays closed and the dashboard says so.
 - `npm run setup -- --admin you@example.com` deploys from a local checkout and prints a one-time setup link for the first admin.
 - Admins invite people from the dashboard. An invite creates a one-time link (valid 7 days) that the admin sends. Opening it creates the person's passkey.
 - When the deployment has the `EMAIL` send binding and an `EMAIL_FROM` address, noenv emails the invite link through Cloudflare Email Sending. The link is still returned, so the admin can send it another way. With email on, the first admin's setup link is also emailed to `ADMIN_EMAIL` instead of being claimable by typing the address.
-- A lost passkey is recovered with a new invite link from an admin.
+- A lost passkey is recovered with a new invite link from an admin. Registering through that link deletes the user's other passkeys and ends their sessions, so the lost passkey stops working.
+- Org admins can grant and remove org admin, and can remove a person from the organization. Removal ends the person's sessions and deletes their passkeys, invites, memberships, and environment keys. A person with secret history stays as a hidden record, so history keeps its author. Admins cannot change or remove themselves, so the organization always keeps an admin.
+- Org admins can reset a person's key after a lost laptop or a leaked key. The reset clears the public key, deletes the person's environment keys, and ends their sessions. The person registers a new key from a fresh device, and an admin runs `noenv grant` again.
 - The browser session is an HttpOnly, SameSite=Strict cookie. Cookie-authenticated writes must come from the same origin.
 - The CLI approves its device code in the signed-in dashboard (`/activate` redirects there) and then uses a bearer session token.
+- Device approval resists code phishing:
+  - The CLI sends its host name when it starts sign-in. The Worker stores it with the requester IP, country, and start time.
+  - The approval URL never carries the code. The person types the code that their own terminal shows.
+  - The dashboard shows the device name, network, and start time before approval.
+  - Approval needs a fresh passkey assertion from the signed-in user, not only the session cookie.
 
 Secret loading requirements:
 
@@ -125,6 +132,10 @@ Initial shell support: Bash and Zsh.
 
 - Encrypt secrets on the client before upload.
 - Use authenticated encryption.
+- Each version carries an HMAC-SHA256 over the project ID, environment, name, and ciphertext. The HMAC key comes from the environment private key through HKDF. Only a holder of that key can write a value that loads. A server, or a stolen session token without the key, cannot add or change a value. The CLI skips a value without a valid HMAC and names it. `noenv secret sign` re-saves such values after an editor checks them.
+- The CLI checks that the environment public key from the server belongs to the environment private key that it unwraps.
+- The CLI pins the project ID and the environment public key for each repository and environment on first use. A later change stops secret loading until the person runs `noenv trust` and accepts the new fingerprint.
+- `noenv grant` and `noenv status` show public key fingerprints, so people can check a key out of band.
 - Never send plaintext secret values to Cloudflare.
 - Each project environment has an encryption key.
 - Authorized users receive access to that key through public-key encryption.
@@ -141,6 +152,14 @@ Three roles:
 Authorization is checked before secret retrieval.
 
 Revoking access prevents future authorized retrieval but cannot erase secrets already copied by a user.
+
+Key rotation (`noenv rotate`, environment admin):
+
+- The CLI makes a new environment key pair, re-encrypts and signs every active secret, and wraps the new private key for each current key holder. It shows each holder's key fingerprint first.
+- The Worker applies the rotation in one batch. It rejects the request unless it covers exactly the current key holders and exactly the active secrets.
+- A removed member keeps the old key. Rotation stops them from reading values written after it. It does not change the values, so change the values they knew at their providers.
+- After a rotation, a version written with an earlier key cannot be restored.
+- Other members run `noenv trust` and check the new fingerprint.
 
 ## 6. Secret Versioning
 
@@ -180,17 +199,18 @@ When prohibited `.env` files are detected:
 
 1. Detect matching files within the git repository.
 2. Block activation when required by policy.
-3. Offer secure migration to NOENV. In `delete` mode, migrate without a prompt.
+3. Offer secure migration to NOENV with `noenv migrate`. It shows each file and its names before it uploads.
 4. Encrypt and upload secrets.
 5. Verify successful migration.
 6. Remove the files:
-   - In `delete` mode, remove them automatically, without a prompt.
+   - In `delete` mode, remove a file automatically, without a prompt, only when NOENV already stores every value in it with the same value.
    - In all other modes, remove them only after explicit local confirmation.
 7. Report compliance.
 
 Automatic deletion (`delete` mode) has these limits:
 
-- Delete a file only after every value in it is uploaded and verified by a decryption round trip.
+- Never upload a value automatically. The shell hook and `noenv exec` only compare a file with NOENV. A file that has a name NOENV does not store yet is kept with the status `unmigrated`, and secret loading is blocked until the developer runs `noenv migrate`. A `.env` file on a branch from someone else can therefore not add secrets for the team.
+- Delete a file only after every value in it is stored in NOENV and verified by a decryption round trip.
 - Never overwrite an existing NOENV secret during migration. If a `.env` value differs from the NOENV value, report a conflict, keep the file, and block secret loading.
 - Do not delete a file that changed after migration.
 - Do not enter nested git repositories (for example vendored dependencies) or `node_modules`.
@@ -209,7 +229,7 @@ Client-reported compliance is not proof against a developer who controls their d
 The dashboard provides:
 
 - **Projects:** Create projects and environments.
-- **Secrets:** Add, update, and manage secret versions.
+- **Secrets:** View secret names and versions, and roll back.
 - **Team:** Invite users and assign permissions.
 - **Policies:** Define and enforce organizational rules.
 - **History:** View changes and roll back versions.
@@ -217,7 +237,7 @@ The dashboard provides:
 
 The Worker serves the dashboard under `/dashboard/`. People sign in with their passkey.
 
-- The dashboard never decrypts secrets. It writes new values by sealing them to the environment public key in the browser.
+- The dashboard never decrypts secrets and never writes values. It has no environment private key, so it cannot sign a version. It shows history and rolls back to an older signed version. People set values with `noenv secret set`.
 - Creating an environment in the browser wraps its private key for the creator's registered public key.
 - Sharing an environment key with another member needs a private key in the browser. Until per-device keys exist, key sharing is a CLI action (`noenv grant`).
 
@@ -232,6 +252,8 @@ noenv status
 noenv secret set KEY
 noenv secret list
 noenv secret rollback KEY VERSION
+noenv secret sign
+noenv trust
 
 noenv migrate
 ```
@@ -247,13 +269,26 @@ Secret entry must not expose values through terminal echo or command-line argume
 - No plaintext secret values stored in Cloudflare.
 - No plaintext secret caching on disk.
 - No execution of arbitrary shell code from `.noenv`.
+- Reserve secret names that change how a shell or a runtime runs code: `PATH`, `PROMPT_COMMAND`, `PS1`, `PROMPT`, `BASH_ENV`, `NODE_OPTIONS`, `PYTHONPATH`, and names that start with `LD_`, `DYLD_`, `GIT_`, `NOENV_` or `_NOENV_`, among others (`packages/config/src/names.ts`). The comparison ignores case. The worker rejects these names on write. `.env` migration treats them as invalid. The CLI skips them on load, so a stored value cannot run code on a reader's machine.
 - No automatic destructive filesystem operations, except the admin-enforced `.env` deletion in §7, within its limits.
 - Restore previous shell variables on project exit.
 - Enforce authorization and applicable policies before retrieval.
 - Use D1 for authoritative permissions and version pointers; account for KV eventual consistency.
 - Support recovery of encryption keys before production use.
 
+- Passkeys require user verification (PIN or biometric) for registration and sign-in.
+- When `minCliVersion` is set, a bearer client that sends no version header is rejected like an old CLI. Cookie (dashboard) requests are exempt.
+- The `AUTH_LIMIT` rate limit binding limits each address to 20 requests a minute on each unauthenticated sign-in and setup endpoint.
+- Only org admins and project admins can look up a user by email.
+
 **Threat model:** NOENV prevents accidental secret exposure. It does not prevent an authorized developer or application from deliberately inspecting injected environment variables.
+
+Known limits that the design accepts:
+
+- **Secrets are ambient in the shell.** Every process started in a loaded repository gets every secret, including install scripts, coding agents, and editor extensions. `noenv exec -- <command>` limits the secrets to one command.
+- **The project comes from the local git origin.** A directory that claims a known origin loads that project's secrets for a person who has access. This adds little risk on top of the previous limit, because that person already runs code in the real repository.
+- **`identity.json` is the root credential.** It is a plaintext PKCS8 private key, mode 0600, in the NOENV config directory. Anyone who copies it and holds a session can unwrap every environment key of that person. Keep it out of backups and dotfile sync. After a leak, an admin resets the key and rotates the affected environments.
+- **Trust on first use.** The first key pin and the first `noenv grant` trust the server. Compare fingerprints out of band when the server could be compromised.
 
 ## 11. MVP Scope
 
