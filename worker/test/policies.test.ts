@@ -56,6 +56,9 @@ test("an outdated CLI cannot retrieve secrets", async () => {
   assert.equal(old.status, 426);
   assert.match(old.body.error, /1\.2\.0 or newer/);
 
+  const hidden = await api(reader, "GET", `${ENVIRONMENT_PATH}/bundle`);
+  assert.equal(hidden.status, 426);
+
   const current = await api(reader, "GET", `${ENVIRONMENT_PATH}/bundle`, undefined, { "X-Noenv-Version": "1.2.0" });
   assert.equal(current.status, 200);
 

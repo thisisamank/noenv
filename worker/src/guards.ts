@@ -1,4 +1,4 @@
-import { ENV_VAR_NAME, IDENTIFIER, REPO } from "@noenv/config/names";
+import { IDENTIFIER, isSecretName, REPO } from "@noenv/config/names";
 import { compareVersions, type Policies } from "@noenv/policy";
 import { authenticate } from "./auth.ts";
 import type { Context, EnvironmentContext, Handler, ProjectContext, Role, UserContext } from "./context.ts";
@@ -93,8 +93,8 @@ export function identifierParam(context: Context, name: string): string {
 
 export function secretNameParam(context: Context): string {
   const value = context.params.name ?? "";
-  if (!ENV_VAR_NAME.test(value)) {
-    throw new HttpError(400, "invalid secret name");
+  if (!isSecretName(value)) {
+    throw new HttpError(400, "invalid or reserved secret name");
   }
   return value;
 }
@@ -117,8 +117,10 @@ function safeDecode(value: string): string {
 
 function requireCliVersion(request: Request, policies: Policies): void {
   const version = request.headers.get(CLI_VERSION_HEADER);
-  if (policies.minCliVersion && version !== null && compareVersions(version, policies.minCliVersion) < 0) {
-    throw new HttpError(426, `noenv CLI ${policies.minCliVersion} or newer is required, you have ${version}`);
+  const viaBearer = request.headers.get("Authorization")?.startsWith("Bearer ") ?? false;
+  if (!policies.minCliVersion || (version === null && !viaBearer)) return;
+  if (version === null || compareVersions(version, policies.minCliVersion) < 0) {
+    throw new HttpError(426, `noenv CLI ${policies.minCliVersion} or newer is required, you have ${version ?? "an unknown version"}`);
   }
 }
 
