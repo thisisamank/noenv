@@ -8,10 +8,11 @@ const DESCRIPTIONS: Record<FileOutcome["status"], string> = {
   found: "found",
   invalid: "kept, it has invalid variable names",
   conflict: "kept, its values differ from noenv",
+  unmigrated: "kept, run `noenv migrate` to review and upload new values",
   failed: "kept, it could not be migrated",
   migrated: "migrated to noenv",
   changed: "kept, it changed during migration",
-  deleted: "migrated to noenv and deleted",
+  deleted: "deleted, noenv stores its values",
 };
 
 export function describeOutcome(target: Target, outcome: FileOutcome): string {

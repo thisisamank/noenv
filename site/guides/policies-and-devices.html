@@ -96,7 +96,7 @@
     <tr><td><strong>warn</strong></td><td>The shell shows a warning. Secrets load. This is the default.</td></tr>
     <tr><td><strong>block</strong></td><td>Secrets do not load while a matching file exists.</td></tr>
     <tr><td><strong>migrate</strong></td><td>Secrets do not load until the developer runs <code>noenv migrate</code> and removes the file.</td></tr>
-    <tr><td><strong>delete</strong></td><td>The CLI migrates each file without a prompt, verifies it, and deletes it.</td></tr>
+    <tr><td><strong>delete</strong></td><td>The CLI deletes each file whose values noenv already stores. A file with new names is kept and blocks loading until the developer runs <code>noenv migrate</code>, so a <code>.env</code> file on a branch cannot add team secrets.</td></tr>
   </tbody>
 </table>
 <p>Include and exclude patterns pick the files. The defaults are <code>.env</code> and <code>.env.*</code>, without <code>.env.example</code>, <code>.env.sample</code>, <code>.env.template</code>, and <code>.env.*.example</code>.</p>

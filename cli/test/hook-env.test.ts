@@ -154,7 +154,8 @@ test("starts one sign-in and does not repeat the message while it is pending", a
 
   const first = await hookEnv(input(hooks));
   assert.equal(pollers, 1);
-  assert.match(opened, /^https:\/\/noenv\.test\/activate\?code=[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+  assert.equal(opened, "https://noenv.test/activate");
+  assert.match(first.messages[0], /enter the code [A-Z2-9]{4}-[A-Z2-9]{4}/);
   assert.match(first.messages[0], /sign in to load secrets/);
   assert.ok(first.lines.includes("_NOENV_RETRY='1'"));
 
@@ -244,16 +245,22 @@ test("NOENV_ENVIRONMENT selects another environment", async () => {
   assert.match(invalid.messages[0], /NOENV_ENVIRONMENT must contain only/);
 });
 
-test("delete mode migrates .env files, deletes them, and loads their values", async () => {
+test("delete mode keeps .env files with new names until migrate, then deletes them and loads their values", async () => {
   await createProject("github.com/acme/delete-mode");
   await setDotenvPolicy("github.com/acme/delete-mode", "delete");
   const root = await gitRepo("git@github.com:acme/delete-mode.git", { ".env": "LOCAL_ONLY=from-dotenv", ".env.example": "LOCAL_ONLY=" });
 
+  const blocked = await run({ cwd: root });
+  assert.equal(existsSync(join(root, ".env")), true);
+  assert.match(blocked.messages[0], /^\.env: kept, run `noenv migrate` to review and upload new values \(LOCAL_ONLY\)$/);
+  assert.deepEqual(secretLines(blocked.lines), []);
+
+  await store("github.com/acme/delete-mode").set("LOCAL_ONLY", "from-dotenv");
   const result = await run({ cwd: root });
 
   assert.equal(existsSync(join(root, ".env")), false);
   assert.equal(existsSync(join(root, ".env.example")), true);
-  assert.deepEqual(result.messages, [".env: migrated to noenv and deleted", "loaded 1 secrets for github.com/acme/delete-mode (development)"]);
+  assert.deepEqual(result.messages.slice(-2), [".env: deleted, noenv stores its values", "loaded 1 secrets for github.com/acme/delete-mode (development)"]);
   assert.equal(bash(`${result.lines.join("\n")}\nprintf '%s' "$LOCAL_ONLY"`), "from-dotenv");
 
   const { devices } = await api<any>(deployment, "GET", "/v1/devices", { token: adminToken });

@@ -50,16 +50,27 @@ test("finds only matching regular files inside the project tree", async () => {
   assert.deepEqual(await findDotenvFiles(root, DELETE), [join(root, ".env"), join(root, "api/.env.local")]);
 });
 
-test("delete mode migrates values, verifies them, and deletes the files", async () => {
+test("delete mode deletes files whose values noenv already stores", async () => {
   const root = await project({ ".env": "export API_KEY=abc\n# comment\nDB_URL=\"postgres://x\"\n", "api/.env.local": "PORT=3000" });
-  const store = memoryStore({ PORT: "3000" });
+  const store = memoryStore({ PORT: "3000", API_KEY: "abc", DB_URL: "postgres://x" });
 
   const result = await enforceDotenvPolicy(root, DELETE, store);
 
   assert.equal(result.blocked, false);
   assert.deepEqual(result.files.map((f) => f.status), ["deleted", "deleted"]);
-  assert.deepEqual(Object.fromEntries(store.values), { PORT: "3000", API_KEY: "abc", DB_URL: "postgres://x" });
   assert.equal(existsSync(join(root, ".env")), false);
+});
+
+test("delete mode never uploads new names in the background", async () => {
+  const root = await project({ "test/fixtures/.env": "API_KEY=abc\nNEW_NAME=from-a-branch" });
+  const store = memoryStore({ API_KEY: "abc" });
+
+  const result = await enforceDotenvPolicy(root, DELETE, store);
+
+  assert.equal(result.blocked, true);
+  assert.deepEqual(result.files.map((f) => [f.status, f.names]), [["unmigrated", ["NEW_NAME"]]]);
+  assert.deepEqual(Object.fromEntries(store.values), { API_KEY: "abc" });
+  assert.equal(existsSync(join(root, "test/fixtures/.env")), true);
 });
 
 test("a value that differs from noenv is a conflict and the file is kept", async () => {
@@ -74,14 +85,11 @@ test("a value that differs from noenv is a conflict and the file is kept", async
   assert.equal(await readFile(join(root, ".env"), "utf8"), "DATABASE_URL=localhost\nNEW_KEY=1");
 });
 
-test("a failed upload or verification keeps the file and blocks", async () => {
+test("a store error keeps the file and blocks", async () => {
   const root = await project({ ".env": "A=1" });
 
-  const failing: SecretStore = { get: async () => undefined, set: async () => Promise.reject(new Error("offline")) };
-  assert.deepEqual((await enforceDotenvPolicy(root, DELETE, failing)).files[0].status, "failed");
-
-  const lossy: SecretStore = { get: async () => undefined, set: async () => {} };
-  const result = await enforceDotenvPolicy(root, DELETE, lossy);
+  const failing: SecretStore = { get: async () => Promise.reject(new Error("offline")), set: async () => {} };
+  const result = await enforceDotenvPolicy(root, DELETE, failing);
   assert.equal(result.files[0].status, "failed");
   assert.equal(result.blocked, true);
   assert.equal(existsSync(join(root, ".env")), true);
@@ -91,6 +99,16 @@ test("invalid variable names keep the file", async () => {
   const root = await project({ ".env": "bad-name=1" });
   const result = await enforceDotenvPolicy(root, DELETE, memoryStore());
   assert.deepEqual(result.files[0].status, "invalid");
+  assert.equal(existsSync(join(root, ".env")), true);
+});
+
+test("reserved variable names keep the file and are not uploaded", async () => {
+  const root = await project({ ".env": "API_KEY=1\nPROMPT_COMMAND=id" });
+  const store = memoryStore();
+  const result = await enforceDotenvPolicy(root, DELETE, store);
+  assert.equal(result.files[0].status, "invalid");
+  assert.deepEqual(result.files[0].names, ["PROMPT_COMMAND"]);
+  assert.equal(await store.get("API_KEY"), undefined);
   assert.equal(existsSync(join(root, ".env")), true);
 });
 

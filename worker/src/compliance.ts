@@ -1,7 +1,7 @@
 import type { EnvironmentContext, UserContext } from "./context.ts";
 import { HttpError, json, readJson } from "./http.ts";
 
-const FILE_STATUSES = ["found", "invalid", "conflict", "failed", "migrated", "changed", "deleted"];
+const FILE_STATUSES = ["found", "invalid", "conflict", "unmigrated", "failed", "migrated", "changed", "deleted"];
 const MAX_FILES = 100;
 
 type FileReport = {
