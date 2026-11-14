@@ -5,6 +5,7 @@ import { mkdir, mkdtemp, realpath, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ConfigError, findProject, normalizeRemoteUrl, parseConfig } from "@noenv/config";
+import { isSecretName } from "@noenv/config/names";
 
 const VALID = `
 version = 1
@@ -91,4 +92,13 @@ test("returns null outside a git repository or without an origin", async () => {
 
   execFileSync("git", ["init", "-q", root]);
   assert.equal(await findProject(root), null);
+});
+
+test("reserves variable names that change how shells and runtimes execute code", () => {
+  for (const name of ["PATH", "path", "PROMPT_COMMAND", "PS1", "PROMPT", "BASH_ENV", "NODE_OPTIONS", "LD_PRELOAD", "DYLD_INSERT_LIBRARIES", "GIT_SSH_COMMAND", "NOENV_URL", "_NOENV_RESTORE", "npm_config_script_shell"]) {
+    assert.equal(isSecretName(name), false, name);
+  }
+  for (const name of ["DATABASE_URL", "API_KEY", "GITHUB_TOKEN", "PATHNAME_PREFIX", "_PRIVATE"]) {
+    assert.equal(isSecretName(name), true, name);
+  }
 });

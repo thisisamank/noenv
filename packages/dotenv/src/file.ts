@@ -1,6 +1,6 @@
 import { lstat, readFile, unlink } from "node:fs/promises";
 import { parseEnv } from "node:util";
-import { ENV_VAR_NAME } from "@noenv/config/names";
+import { isSecretName } from "@noenv/config/names";
 
 export type DotenvFile = {
   path: string;
@@ -13,7 +13,7 @@ export async function readDotenvFile(path: string): Promise<DotenvFile> {
   await requireRegularFile(path);
   const content = await readFile(path, "utf8");
   const values = parseEnv(content) as Record<string, string>;
-  const invalidNames = Object.keys(values).filter((name) => !ENV_VAR_NAME.test(name));
+  const invalidNames = Object.keys(values).filter((name) => !isSecretName(name));
   return { path, content, values, invalidNames };
 }
 
