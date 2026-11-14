@@ -54,8 +54,16 @@
       <p>New features, changes, and fixes to the CLI, the Worker, and the dashboard. Newest first. <a class="text-link" href="/changelog.xml">Atom feed</a></p>
     </div>
     <div class="log">
-    <article class="release latest" id="cli-0-3-0">
-      <div class="release-date"><div><time datetime="2026-11-13">November 13, 2026</time><span class="badge solid">CLI 0.3.0</span></div></div>
+    <article class="release latest" id="cli-0-4-0">
+      <div class="release-date"><div><time datetime="2026-11-14">November 14, 2026</time><span class="badge solid">CLI 0.4.0</span></div></div>
+      <div class="release-body">
+        <h2>Signed secrets and safer sign-in</h2>
+        <p>A security release. Update the CLI, then have an editor run <code>noenv secret sign</code> in each environment.</p>
+        <h3>Added</h3><ul><li><code>noenv secret sign</code> re-saves secrets that an older noenv or the dashboard wrote, after you check their names.</li><li><code>noenv rotate</code> makes a new environment key, re-encrypts every secret, and shares the key with the current key holders.</li><li><code>noenv trust</code> accepts a new environment key after an admin rotated it.</li><li><code>noenv status</code> and <code>noenv grant</code> show key fingerprints, so you can check a key with its owner.</li></ul><h3>Changed</h3><ul><li>Each secret version is signed with the environment key. The CLI skips a value without a valid signature, so a server or a stolen session token cannot forge one. After you update, an editor runs <code>noenv secret sign</code> once in each environment.</li><li>The CLI checks that the server's environment key matches the key it unwraps, and pins it on first use.</li><li>Terminal sign-in shows your device in the dashboard. You type the code and confirm with your passkey.</li><li>Delete mode no longer uploads <code>.env</code> values in the background. A file with new names waits for <code>noenv migrate</code>.</li><li>Names that change how code runs, such as <code>PATH</code>, <code>PROMPT_COMMAND</code>, <code>NODE_OPTIONS</code>, <code>LD_*</code> and <code>GIT_*</code>, are reserved. The CLI never exports them.</li></ul>
+      </div>
+    </article>
+    <article class="release" id="cli-0-3-0">
+      <div class="release-date"><div><time datetime="2026-11-13">November 13, 2026</time><span class="badge">CLI 0.3.0</span></div></div>
       <div class="release-body">
         <h2>The deployment in .noenv picks the account</h2>
         <p>Each repository's <code>.noenv</code> file names its deployment, and every teammate gets the same account name from the deployment.</p>

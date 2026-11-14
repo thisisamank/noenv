@@ -4,7 +4,14 @@
   <link href="https://noenv.thisisamank.in/changelog"/>
   <link rel="self" href="https://noenv.thisisamank.in/changelog.xml"/>
   <id>https://noenv.thisisamank.in/changelog</id>
-  <updated>2026-11-13T00:00:00Z</updated>
+  <updated>2026-11-14T00:00:00Z</updated>
+  <entry>
+    <title>Signed secrets and safer sign-in</title>
+    <link href="https://noenv.thisisamank.in/changelog#cli-0-4-0"/>
+    <id>https://noenv.thisisamank.in/changelog#cli-0-4-0</id>
+    <updated>2026-11-14T00:00:00Z</updated>
+    <content type="html">&lt;p&gt;A security release. Update the CLI, then have an editor run &lt;code&gt;noenv secret sign&lt;/code&gt; in each environment.&lt;/p&gt;&lt;h3&gt;Added&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;&lt;code&gt;noenv secret sign&lt;/code&gt; re-saves secrets that an older noenv or the dashboard wrote, after you check their names.&lt;/li&gt;&lt;li&gt;&lt;code&gt;noenv rotate&lt;/code&gt; makes a new environment key, re-encrypts every secret, and shares the key with the current key holders.&lt;/li&gt;&lt;li&gt;&lt;code&gt;noenv trust&lt;/code&gt; accepts a new environment key after an admin rotated it.&lt;/li&gt;&lt;li&gt;&lt;code&gt;noenv status&lt;/code&gt; and &lt;code&gt;noenv grant&lt;/code&gt; show key fingerprints, so you can check a key with its owner.&lt;/li&gt;&lt;/ul&gt;&lt;h3&gt;Changed&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;Each secret version is signed with the environment key. The CLI skips a value without a valid signature, so a server or a stolen session token cannot forge one. After you update, an editor runs &lt;code&gt;noenv secret sign&lt;/code&gt; once in each environment.&lt;/li&gt;&lt;li&gt;The CLI checks that the server's environment key matches the key it unwraps, and pins it on first use.&lt;/li&gt;&lt;li&gt;Terminal sign-in shows your device in the dashboard. You type the code and confirm with your passkey.&lt;/li&gt;&lt;li&gt;Delete mode no longer uploads &lt;code&gt;.env&lt;/code&gt; values in the background. A file with new names waits for &lt;code&gt;noenv migrate&lt;/code&gt;.&lt;/li&gt;&lt;li&gt;Names that change how code runs, such as &lt;code&gt;PATH&lt;/code&gt;, &lt;code&gt;PROMPT_COMMAND&lt;/code&gt;, &lt;code&gt;NODE_OPTIONS&lt;/code&gt;, &lt;code&gt;LD_*&lt;/code&gt; and &lt;code&gt;GIT_*&lt;/code&gt;, are reserved. The CLI never exports them.&lt;/li&gt;&lt;/ul&gt;</content>
+  </entry>
   <entry>
     <title>The deployment in .noenv picks the account</title>
     <link href="https://noenv.thisisamank.in/changelog#cli-0-3-0"/>
