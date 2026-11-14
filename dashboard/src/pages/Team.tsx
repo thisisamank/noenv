@@ -15,7 +15,7 @@ const ROLES: Role[] = ["reader", "editor", "admin"];
 const KEY_SHARING_NOTE = "Sharing keys from the browser needs device keys, which are not built yet. Use `noenv grant` for now.";
 
 export function Team() {
-  const { projects } = useApp();
+  const { projects, me } = useApp();
   const notify = useToast();
   const users = useResource(() => api<{ users: User[] }>("GET", "/v1/users").then((body) => body.users), []);
 
@@ -118,6 +118,42 @@ export function Team() {
                           onClick={() => cancel(user)}
                         >
                           Cancel invite
+                        </button>
+                      </div>
+                    )}
+                    {user.hasPasskey && user.id !== me.id && rows.findIndex((row) => row.user.id === user.id) === index && (
+                      <div className="row-actions">
+                        <button
+                          className="btn sm"
+                          onClick={() =>
+                            run(
+                              () => api("PUT", `/v1/users/${user.id}/admin`, { isAdmin: !user.isAdmin }),
+                              user.isAdmin ? `${user.email} is no longer an org admin` : `${user.email} is now an org admin`,
+                            )
+                          }
+                        >
+                          {user.isAdmin ? "Remove admin" : "Make admin"}
+                        </button>
+                        {user.hasPublicKey && (
+                          <button
+                            className="btn sm"
+                            title="Use when a laptop is lost or a key leaked. It signs the person out and removes their environment keys."
+                            onClick={() =>
+                              confirm(`Reset the key of ${user.email}? They are signed out, lose their environment keys, and register a new key from a fresh device. Then run noenv grant again.`) &&
+                              run(() => api("DELETE", `/v1/users/${user.id}/public-key`), `Reset the key of ${user.email}`)
+                            }
+                          >
+                            Reset key
+                          </button>
+                        )}
+                        <button
+                          className="btn sm danger"
+                          onClick={() =>
+                            confirm(`Remove ${user.email} from the organization? This ends their sessions and deletes their passkeys and keys. Run noenv rotate in the environments they could read.`) &&
+                            run(() => api("DELETE", `/v1/users/${user.id}`), `Removed ${user.email} from the organization`)
+                          }
+                        >
+                          Remove from org
                         </button>
                       </div>
                     )}

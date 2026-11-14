@@ -1,4 +1,5 @@
 import { newId } from "./auth.ts";
+import { identifierParam } from "./guards.ts";
 import type { UserContext } from "./context.ts";
 import { HttpError, json, readJson } from "./http.ts";
 import { sendInvite } from "./invites.ts";
@@ -40,7 +41,7 @@ export async function listUsers({ env }: UserContext): Promise<Response> {
     env.DB.prepare(
       `SELECT u.id, u.email, u.is_admin = 1 AS isAdmin, u.public_key IS NOT NULL AS hasPublicKey,
               EXISTS (SELECT 1 FROM passkeys p WHERE p.user_id = u.id) AS hasPasskey, u.created_at AS createdAt
-       FROM users u ORDER BY u.email`,
+       FROM users u WHERE u.removed_at IS NULL ORDER BY u.email`,
     ),
     env.DB.prepare(
       `SELECT m.user_id AS userId, p.repo, m.role,
@@ -71,10 +72,19 @@ export async function listUsers({ env }: UserContext): Promise<Response> {
   });
 }
 
-export async function findUser({ request, env }: UserContext): Promise<Response> {
+export async function findUser({ request, env, userId }: UserContext): Promise<Response> {
+  const allowed = await env.DB
+    .prepare(
+      `SELECT 1 FROM users u WHERE u.id = ?1 AND (u.is_admin = 1 OR EXISTS (SELECT 1 FROM memberships m WHERE m.user_id = u.id AND m.role = 'admin'))`,
+    )
+    .bind(userId)
+    .first();
+  if (!allowed) {
+    throw new HttpError(403, "forbidden");
+  }
   const email = new URL(request.url).searchParams.get("email")?.toLowerCase() ?? "";
   const user = await env.DB
-    .prepare("SELECT id, email, public_key FROM users WHERE email = ?")
+    .prepare("SELECT id, email, public_key FROM users WHERE email = ? AND removed_at IS NULL")
     .bind(email)
     .first<{ id: string; email: string; public_key: string | null }>();
 
@@ -92,7 +102,11 @@ export async function inviteUser(context: UserContext): Promise<Response> {
   }
 
   const user = await env.DB
-    .prepare("INSERT INTO users (id, email) VALUES (?, ?) ON CONFLICT (email) DO NOTHING RETURNING id, email")
+    .prepare(
+      `INSERT INTO users (id, email) VALUES (?, ?)
+       ON CONFLICT (email) DO UPDATE SET removed_at = NULL WHERE removed_at IS NOT NULL
+       RETURNING id, email`,
+    )
     .bind(newId("usr"), email.toLowerCase())
     .first<{ id: string; email: string }>();
 
@@ -100,4 +114,65 @@ export async function inviteUser(context: UserContext): Promise<Response> {
     throw new HttpError(409, "this user already exists");
   }
   return json({ ...user, ...(await sendInvite(context, user.id, user.email)) }, 201);
+}
+
+export async function setOrganizationAdmin(context: UserContext): Promise<Response> {
+  const { request, env, userId } = context;
+  const target = identifierParam(context, "userId");
+  const { isAdmin } = await readJson(request);
+  if (typeof isAdmin !== "boolean") {
+    throw new HttpError(400, "isAdmin must be true or false");
+  }
+  if (target === userId) {
+    throw new HttpError(409, "you cannot change your own admin role, ask another admin");
+  }
+  const result = await env.DB.prepare("UPDATE users SET is_admin = ? WHERE id = ?").bind(isAdmin ? 1 : 0, target).run();
+  if (result.meta.changes === 0) {
+    throw new HttpError(404, "user not found");
+  }
+  return json({ userId: target, isAdmin });
+}
+
+export async function removeUser(context: UserContext): Promise<Response> {
+  const { env, userId } = context;
+  const target = identifierParam(context, "userId");
+  if (target === userId) {
+    throw new HttpError(409, "you cannot remove yourself, ask another admin");
+  }
+  const user = await env.DB
+    .prepare("SELECT EXISTS (SELECT 1 FROM secret_versions v WHERE v.author_id = u.id) AS hasHistory FROM users u WHERE u.id = ?")
+    .bind(target)
+    .first<{ hasHistory: number }>();
+  if (!user) {
+    throw new HttpError(404, "user not found");
+  }
+
+  await env.DB.batch([
+    ...revokeAccess(env.DB, target),
+    env.DB.prepare("DELETE FROM memberships WHERE user_id = ?").bind(target),
+    env.DB.prepare("DELETE FROM passkeys WHERE user_id = ?").bind(target),
+    env.DB.prepare("DELETE FROM invites WHERE user_id = ?").bind(target),
+    env.DB.prepare("UPDATE policies SET updated_by = ? WHERE updated_by = ?").bind(userId, target),
+    user.hasHistory
+      ? env.DB.prepare("UPDATE users SET is_admin = 0, removed_at = datetime('now') WHERE id = ?").bind(target)
+      : env.DB.prepare("DELETE FROM users WHERE id = ?").bind(target),
+  ]);
+  return new Response(null, { status: 204 });
+}
+
+export async function resetPublicKey(context: UserContext): Promise<Response> {
+  const target = identifierParam(context, "userId");
+  const result = await context.env.DB.batch(revokeAccess(context.env.DB, target));
+  if (result[0]!.meta.changes === 0) {
+    throw new HttpError(404, "user not found");
+  }
+  return new Response(null, { status: 204 });
+}
+
+function revokeAccess(db: D1Database, userId: string): D1PreparedStatement[] {
+  return [
+    db.prepare("UPDATE users SET public_key = NULL WHERE id = ?").bind(userId),
+    db.prepare("DELETE FROM environment_keys WHERE user_id = ?").bind(userId),
+    db.prepare("DELETE FROM sessions WHERE user_id = ?").bind(userId),
+  ];
 }

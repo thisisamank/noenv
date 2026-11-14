@@ -2,7 +2,7 @@ import type { Sealed } from "@noenv/crypto";
 import type { EnvironmentContext } from "./context.ts";
 import { secretNameParam } from "./guards.ts";
 import { HttpError, json, readJson } from "./http.ts";
-import { parseSealed } from "./sealed.ts";
+import { isPublicKey, parseSealed, parseSignedSecret } from "./sealed.ts";
 
 type ActiveSecret = {
   name: string;
@@ -60,7 +60,7 @@ export async function getBundle(context: EnvironmentContext): Promise<Response> 
 
 export async function putSecret(context: EnvironmentContext): Promise<Response> {
   const name = secretNameParam(context);
-  const sealed = parseSealed(await readJson(context.request), "body");
+  const sealed = parseSignedSecret(await readJson(context.request));
   const version = await addVersion(context, name, sealed, null);
   return json({ name, version }, 201);
 }
@@ -92,18 +92,105 @@ export async function rollbackSecret(context: EnvironmentContext): Promise<Respo
 
   const target = await context.env.DB
     .prepare(
-      `SELECT ephemeral_public_key AS ephemeralPublicKey, iv, ciphertext
-       FROM secret_versions WHERE project_id = ? AND environment = ? AND name = ? AND version = ?`,
+      `SELECT v.ephemeral_public_key AS ephemeralPublicKey, v.iv, v.ciphertext, v.mac, v.key_version = e.key_version AS current
+       FROM secret_versions v JOIN environments e ON e.project_id = v.project_id AND e.name = v.environment
+       WHERE v.project_id = ? AND v.environment = ? AND v.name = ? AND v.version = ?`,
     )
     .bind(context.projectId, context.environment, name, version)
-    .first<Sealed>();
+    .first<Sealed & { current: number }>();
 
   if (!target) {
     throw new HttpError(404, "version not found");
   }
+  if (!target.current) {
+    throw new HttpError(409, "this version was written with an earlier environment key, so it cannot be restored after a rotation");
+  }
 
-  const newVersion = await addVersion(context, name, target, version as number);
+  const { current: _current, ...sealed } = target;
+  const newVersion = await addVersion(context, name, sealed, version as number);
   return json({ name, version: newVersion, restoredFrom: version });
+}
+
+export async function listKeyHolders({ env, projectId, environment }: EnvironmentContext): Promise<Response> {
+  const { results } = await env.DB
+    .prepare(
+      `SELECT u.id AS userId, u.email, u.public_key AS publicKey FROM environment_keys k JOIN users u ON u.id = k.user_id
+       WHERE k.project_id = ? AND k.environment = ? ORDER BY u.email`,
+    )
+    .bind(projectId, environment)
+    .all();
+  return json({ holders: results });
+}
+
+export async function rotateEnvironmentKey(context: EnvironmentContext): Promise<Response> {
+  const { env, projectId, environment, userId } = context;
+  const db = env.DB;
+  const body = await readJson(context.request);
+  if (!isPublicKey(body.publicKey)) {
+    throw new HttpError(400, "publicKey must be the base64 public key of the new environment key");
+  }
+  const wrappedKeys = objectOf(body.wrappedKeys, "wrappedKeys", (value) => parseSealed(value, "wrappedKeys"));
+  const secrets = objectOf(body.secrets, "secrets", parseSignedSecret);
+
+  const [holders, active] = await db.batch<{ id: string }>([
+    db.prepare("SELECT user_id AS id FROM environment_keys WHERE project_id = ? AND environment = ?").bind(projectId, environment),
+    db.prepare("SELECT name AS id FROM secrets WHERE project_id = ? AND environment = ?").bind(projectId, environment),
+  ]);
+  requireSameSet(holders.results.map((row) => row.id), Object.keys(wrappedKeys), "wrappedKeys must cover exactly the current key holders");
+  requireSameSet(active.results.map((row) => row.id), Object.keys(secrets), "secrets must cover exactly the active secrets");
+  if (!(userId in wrappedKeys)) {
+    throw new HttpError(400, "wrappedKeys must include your own key");
+  }
+
+  await db.batch([
+    db
+      .prepare("UPDATE environments SET public_key = ?, key_version = key_version + 1, revision = revision + 1 WHERE project_id = ? AND name = ?")
+      .bind(body.publicKey, projectId, environment),
+    db.prepare("DELETE FROM environment_keys WHERE project_id = ? AND environment = ?").bind(projectId, environment),
+    ...Object.entries(wrappedKeys).map(([holder, wrapped]) =>
+      db
+        .prepare("INSERT INTO environment_keys (project_id, environment, user_id, wrapped_key) VALUES (?, ?, ?, ?)")
+        .bind(projectId, environment, holder, JSON.stringify(wrapped)),
+    ),
+    ...Object.entries(secrets).flatMap(([name, sealed]) => [
+      db
+        .prepare(
+          `INSERT INTO secret_versions
+             (project_id, environment, name, version, ephemeral_public_key, iv, ciphertext, author_id, mac, key_version)
+           SELECT ?1, ?2, ?3, MAX(version) + 1, ?4, ?5, ?6, ?7, ?8,
+                  (SELECT key_version FROM environments WHERE project_id = ?1 AND name = ?2)
+           FROM secret_versions WHERE project_id = ?1 AND environment = ?2 AND name = ?3`,
+        )
+        .bind(projectId, environment, name, sealed.ephemeralPublicKey, sealed.iv, sealed.ciphertext, userId, sealed.mac!),
+      db
+        .prepare(
+          `UPDATE secrets SET active_version = (SELECT MAX(version) FROM secret_versions WHERE project_id = ?1 AND environment = ?2 AND name = ?3)
+           WHERE project_id = ?1 AND environment = ?2 AND name = ?3`,
+        )
+        .bind(projectId, environment, name),
+    ]),
+  ]);
+
+  await env.SECRETS.put(snapshotKey(context), JSON.stringify(await readSnapshot(context)));
+  return json({ rotated: true, holders: Object.keys(wrappedKeys).length, secrets: Object.keys(secrets).length });
+}
+
+function objectOf<T>(value: unknown, field: string, parse: (item: unknown) => T): Record<string, T> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    throw new HttpError(400, `${field} must be an object`);
+  }
+  const entries = Object.entries(value);
+  if (entries.length > 500) {
+    throw new HttpError(400, `${field} has too many entries`);
+  }
+  return Object.fromEntries(entries.map(([key, item]) => [key, parse(item)]));
+}
+
+function requireSameSet(expected: string[], actual: string[], message: string): void {
+  const wanted = new Set(expected);
+  if (wanted.size !== actual.length || !actual.every((item) => wanted.has(item))) {
+    throw new HttpError(409, message);
+  }
 }
 
 async function addVersion(context: EnvironmentContext, name: string, sealed: Sealed, restoredFrom: number | null): Promise<number> {
@@ -114,12 +201,13 @@ async function addVersion(context: EnvironmentContext, name: string, sealed: Sea
     db
       .prepare(
         `INSERT INTO secret_versions
-           (project_id, environment, name, version, ephemeral_public_key, iv, ciphertext, author_id, restored_from)
-         SELECT ?1, ?2, ?3, COALESCE(MAX(version), 0) + 1, ?4, ?5, ?6, ?7, ?8
+           (project_id, environment, name, version, ephemeral_public_key, iv, ciphertext, author_id, restored_from, mac, key_version)
+         SELECT ?1, ?2, ?3, COALESCE(MAX(version), 0) + 1, ?4, ?5, ?6, ?7, ?8, ?9,
+                (SELECT key_version FROM environments WHERE project_id = ?1 AND name = ?2)
          FROM secret_versions WHERE project_id = ?1 AND environment = ?2 AND name = ?3
          RETURNING version`,
       )
-      .bind(projectId, environment, name, sealed.ephemeralPublicKey, sealed.iv, sealed.ciphertext, userId, restoredFrom),
+      .bind(projectId, environment, name, sealed.ephemeralPublicKey, sealed.iv, sealed.ciphertext, userId, restoredFrom, sealed.mac ?? null),
     db
       .prepare(
         `INSERT INTO secrets (project_id, environment, name, active_version)
@@ -143,7 +231,7 @@ async function readSnapshot({ env, projectId, environment }: EnvironmentContext)
     db.prepare("SELECT revision FROM environments WHERE project_id = ? AND name = ?").bind(projectId, environment),
     db
       .prepare(
-        `SELECT s.name, s.active_version AS version, v.ephemeral_public_key AS ephemeralPublicKey, v.iv, v.ciphertext
+        `SELECT s.name, s.active_version AS version, v.ephemeral_public_key AS ephemeralPublicKey, v.iv, v.ciphertext, v.mac
          FROM secrets s
          JOIN secret_versions v USING (project_id, environment, name)
          WHERE s.project_id = ? AND s.environment = ? AND v.version = s.active_version
@@ -152,10 +240,10 @@ async function readSnapshot({ env, projectId, environment }: EnvironmentContext)
       .bind(projectId, environment),
   ]);
 
-  const rows = secrets.results as (Sealed & { name: string; version: number })[];
+  const rows = secrets.results as (Sealed & { name: string; version: number; mac: string | null })[];
   return {
     revision: (revision.results[0] as { revision: number }).revision,
-    secrets: rows.map(({ name, version, ...sealed }) => ({ name, version, sealed })),
+    secrets: rows.map(({ name, version, mac, ...sealed }) => ({ name, version, sealed: mac ? { ...sealed, mac } : sealed })),
   };
 }
 

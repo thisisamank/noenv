@@ -4,7 +4,7 @@ import { authCommand, statusCommand } from "./commands/auth.ts";
 import { execCommand } from "./commands/exec.ts";
 import { wranglerCommand } from "./commands/wrangler.ts";
 import { migrateCommand } from "./commands/migrate.ts";
-import { grantCommand, initCommand, inviteCommand, revokeCommand } from "./commands/project.ts";
+import { grantCommand, initCommand, inviteCommand, revokeCommand, rotateCommand, trustCommand } from "./commands/project.ts";
 import { secretCommand } from "./commands/secret.ts";
 import { hookEnvCommand, refreshCommand, shellCommand, watchCommand } from "./commands/shell.ts";
 
@@ -27,6 +27,7 @@ const USAGE = `usage: noenv <command>
   secret list                list secrets in this environment
   secret history KEY         list the versions of a secret
   secret rollback KEY VER    restore an older version of a secret
+  secret sign [--yes]        sign secrets that an older noenv or the dashboard wrote
   migrate                    move .env files of this repository into noenv
   wrangler [KEY...]          push secrets to the Worker with wrangler; without KEY,
                              pick them in a list (keys under [wrangler] secrets in
@@ -34,6 +35,9 @@ const USAGE = `usage: noenv <command>
   invite EMAIL               invite a user to this deployment
   grant EMAIL ROLE           give a user access to this project and environment
   revoke EMAIL               remove a user from this project
+  rotate [--yes]             make a new environment key, re-encrypt every secret, and
+                             share the key with the current key holders
+  trust                      accept a new environment key after an admin rotated it
 `;
 
 const commands: Record<string, (args: string[]) => Promise<void>> = {
@@ -52,6 +56,8 @@ const commands: Record<string, (args: string[]) => Promise<void>> = {
   invite: inviteCommand,
   grant: grantCommand,
   revoke: revokeCommand,
+  trust: trustCommand,
+  rotate: rotateCommand,
 };
 
 const [name, ...args] = process.argv.slice(2);

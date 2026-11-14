@@ -1,13 +1,16 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { CONFIG_FILE } from "@noenv/config";
-import { exportPublicKey, generateKeyPair, importPublicKey, wrapPrivateKey } from "@noenv/crypto";
+import { isReservedName } from "@noenv/config/names";
+import { decryptUnsigned, encryptSecret, exportPublicKey, fingerprint, generateKeyPair, importPublicKey, wrapPrivateKey, type Sealed } from "@noenv/crypto";
 import { api, ApiError, environmentPath, repoPath } from "../api.ts";
-import { fetchBundle } from "../bundle.ts";
+import { fetchBundle, fetchRawBundle, openBundle, openEnvironmentKey } from "../bundle.ts";
 import { inProject, requireDeployment, signedIn } from "../context.ts";
 import { namedDeployment, readAccounts, type Deployment } from "../deployment.ts";
-import { select } from "../prompt.ts";
+import { readPin, writePin } from "../pins.ts";
+import { confirm, select } from "../prompt.ts";
 import { requireTarget, type Target } from "../target.ts";
+import { markChanged } from "../watch.ts";
 
 type User = { id: string; email: string; publicKey: string | null };
 
@@ -111,6 +114,11 @@ export async function grantCommand([email, role]: string[]): Promise<void> {
     return;
   }
 
+  console.log(`${email}'s key fingerprint is ${await fingerprint(user.publicKey)}. Check that it matches \`noenv status\` on their machine.`);
+  if (process.stdin.isTTY && !(await confirm(`Share the ${target.environment} key with this key?`))) {
+    console.log("Did not share the key. Run this command again after you check the fingerprint.");
+    return;
+  }
   const bundle = await fetchBundle(deployment, token, identity.privateKey, target.repo, target.environment);
   const wrappedKey = await wrapPrivateKey(bundle.environmentPrivateKey, await importPublicKey(user.publicKey));
   await api(deployment, "PUT", `${environmentPath(target.repo, target.environment)}/keys/${user.id}`, {
@@ -120,13 +128,73 @@ export async function grantCommand([email, role]: string[]): Promise<void> {
   console.log(`Shared the ${target.environment} key with ${email}`);
 }
 
+type Holder = { userId: string; email: string; publicKey: string | null };
+
+export async function rotateCommand(args: string[]): Promise<void> {
+  const { deployment, token, identity, target } = await inProject();
+  const path = environmentPath(target.repo, target.environment);
+  const raw = await fetchRawBundle(deployment, token, target.repo, target.environment);
+  const bundle = await openBundle(raw, identity.privateKey, target.environment);
+  if (bundle.unsigned.length > 0) {
+    throw new Error(`these secrets are not signed: ${bundle.unsigned.join(", ")}. Check them and run \`noenv secret sign\` first`);
+  }
+
+  const { holders } = await api<{ holders: Holder[] }>(deployment, "GET", `${path}/keys`, { token });
+  console.log(`The new ${target.environment} key goes to these people:`);
+  for (const holder of holders) {
+    if (!holder.publicKey) throw new Error(`${holder.email} holds a key but has no public key, ask an admin to remove their access first`);
+    console.log(`  ${holder.email}  ${await fingerprint(holder.publicKey)}`);
+  }
+  if (!args.includes("--yes") && !(await confirm("Rotate the key? Teammates then run `noenv trust`"))) {
+    throw new Error("cancelled, the key did not change (pass --yes to rotate without a terminal)");
+  }
+
+  const next = await generateKeyPair();
+  const environmentPrivateKey = await openEnvironmentKey(raw, identity.privateKey);
+  const secrets: Record<string, Sealed> = {};
+  for (const { name, sealed } of raw.secrets) {
+    const context = { projectId: raw.projectId, environment: target.environment, name };
+    const value = isReservedName(name) ? await decryptUnsigned(environmentPrivateKey, sealed, context) : bundle.secrets[name]!;
+    secrets[name] = await encryptSecret(next.privateKey, value, context);
+  }
+  const wrappedKeys: Record<string, Sealed> = {};
+  for (const holder of holders) wrappedKeys[holder.userId] = await wrapPrivateKey(next.privateKey, await importPublicKey(holder.publicKey!));
+
+  const publicKey = await exportPublicKey(next.publicKey);
+  await api(deployment, "POST", `${path}/rotate`, { token, body: { publicKey, secrets, wrappedKeys } });
+  await writePin(deployment, target.repo, target.environment, { projectId: raw.projectId, publicKey });
+  await markChanged(deployment, target.repo, target.environment);
+  console.log(`Rotated the ${target.environment} key of ${target.repo}. The new fingerprint is ${await fingerprint(publicKey)}.`);
+  console.log("Tell teammates to run `noenv trust` and check that fingerprint. Rotation does not change the values, so change values a removed person knew at their providers.");
+}
+
+export async function trustCommand(): Promise<void> {
+  const { deployment, token, identity, target } = await inProject();
+  const raw = await fetchRawBundle(deployment, token, target.repo, target.environment, { pin: false });
+  await openEnvironmentKey(raw, identity.privateKey);
+  const known = await readPin(deployment, target.repo, target.environment);
+  const next = await fingerprint(raw.publicKey);
+
+  if (known && known.publicKey === raw.publicKey && known.projectId === raw.projectId) {
+    console.log(`${target.repo} (${target.environment}) already uses the trusted key ${next}`);
+    return;
+  }
+  console.log(`Trusted key: ${known ? `${await fingerprint(known.publicKey)} (project ${known.projectId})` : "none"}`);
+  console.log(`Server key:  ${next} (project ${raw.projectId})`);
+  if (!(await confirm("Trust the server key? Do this only after an admin confirms the new fingerprint"))) {
+    throw new Error("cancelled, the trusted key did not change");
+  }
+  await writePin(deployment, target.repo, target.environment, raw);
+  console.log(`Now trusting ${next} for ${target.repo} (${target.environment})`);
+}
+
 export async function revokeCommand([email]: string[]): Promise<void> {
   if (!email) throw new Error("usage: noenv revoke EMAIL");
   const { deployment, token, target } = await inProject();
   const user = await findUser(deployment, token, email);
 
   await api(deployment, "DELETE", `${repoPath(target.repo)}/members/${user.id}`, { token });
-  console.log(`Removed ${email} from ${target.repo}. Rotate secrets they could read.`);
+  console.log(`Removed ${email} from ${target.repo}. Run \`noenv rotate\` in each environment they could read, then change the values at their providers.`);
 }
 
 async function findUser(deployment: Parameters<typeof api>[0], token: string, email: string): Promise<User> {
