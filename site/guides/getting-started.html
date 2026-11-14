@@ -89,18 +89,19 @@
 
 <h2 id="deploy">1. Deploy noenv</h2>
 <p>Click <a href="https://deploy.workers.cloudflare.com/?url=https://github.com/thisisamank/noenv">Deploy to Cloudflare</a>. Cloudflare copies the repository to your account and creates one Worker, one D1 database, and one KV namespace.</p>
-<p>The form asks for two values:</p>
+<p>The form asks for these values:</p>
 <table>
   <thead><tr><th>Variable</th><th>What to enter</th></tr></thead>
   <tbody>
     <tr><td><code>ADMIN_EMAIL</code></td><td>Your email address. This person becomes the first admin.</td></tr>
+    <tr><td><code>SETUP_TOKEN</code></td><td>A random string of at least 16 characters that you make up. You type it with your email to create the admin passkey. Not needed when email is on.</td></tr>
     <tr><td><code>EMAIL_FROM</code></td><td>A sender address on a domain with Cloudflare Email Sending, to email invites. Otherwise keep <code>none</code>.</td></tr>
   </tbody>
 </table>
 
 <h2 id="passkey">2. Create your admin passkey</h2>
-<p>Open <code>https://&lt;your-worker&gt;.workers.dev/dashboard/</code> and sign up with the same email. If email is on, the dashboard sends you a setup link instead.</p>
-<div class="note"><svg class="icon"><use href="/icons.svg#info"/></svg><div>With email on, only a person who can read <code>ADMIN_EMAIL</code> can claim the deployment. Without email, claim it right after you deploy.</div></div>
+<p>Open <code>https://&lt;your-worker&gt;.workers.dev/dashboard/</code> and sign up with the same email and your setup token. If email is on, the dashboard sends you a setup link instead.</p>
+<div class="note"><svg class="icon"><use href="/icons.svg#info"/></svg><div>With email on, only a person who can read <code>ADMIN_EMAIL</code> can claim the deployment. Without email, a person needs both <code>ADMIN_EMAIL</code> and <code>SETUP_TOKEN</code>.</div></div>
 
 <h2 id="install">3. Install the CLI</h2>
 <pre><code><span class="p">$</span> npm install -g @thisisamank/noenv-cli</code></pre>

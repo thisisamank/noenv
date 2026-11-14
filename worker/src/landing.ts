@@ -160,7 +160,7 @@ export async function landingPage({ request, env }: Context): Promise<Response> 
   const shell = (kind: "zsh" | "bash") => `export NOENV_URL="${origin}"\neval "$(noenv shell ${kind})"`;
 
   const banner = setup
-    ? `<div class="setup">${icon("alert")}<div><b>This deployment has no admin yet.</b><span>Finish setup with the admin email you entered when you deployed.</span></div><a class="btn primary" href="/dashboard/">Finish setup ${icon("arrow")}</a></div>`
+    ? `<div class="setup">${icon("alert")}<div><b>This deployment has no admin yet.</b><span>Finish setup with the admin email and setup token you entered when you deployed.</span></div><a class="btn primary" href="/dashboard/">Finish setup ${icon("arrow")}</a></div>`
     : "";
 
   const body = `<header><div class="wrap">

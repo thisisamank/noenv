@@ -79,7 +79,7 @@ test("a fresh deployment emails the setup link to the admin email only", async (
     const env = { ...withEmail, DB: fresh.env.DB, SECRETS: fresh.env.SECRETS, ADMIN_EMAIL: "Owner@example.com" };
     const headers = { Origin: ORIGIN };
 
-    assert.deepEqual((await call(env, "GET", "/v1/setup")).body, { available: true, email: true });
+    assert.deepEqual((await call(env, "GET", "/v1/setup")).body, { available: true, email: true, missingToken: false });
     assert.equal((await call(env, "POST", "/v1/setup/options", { headers, body: { email: "owner@example.com" } })).status, 403);
 
     const first = await call(env, "POST", "/v1/setup/email", { headers });

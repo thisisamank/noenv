@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/demo.gif" alt="A teammate saves a new secret version in the dashboard, and the terminal picks it up at the next prompt" width="100%">
+  <img src="docs/demo.gif" alt="A teammate saves a new secret version, and the terminal picks it up at the next prompt" width="100%">
 </p>
 
 <p align="center">
@@ -38,16 +38,16 @@ Deploy, create a passkey, install the CLI, approve your terminal, and move your 
 
 - **Loads secrets by repository.** The git `origin` is the project. There is nothing to configure per repo.
 - **Encrypts on your machine.** Values are encrypted before they leave your laptop. The server only ever stores ciphertext.
-- **Updates live.** A secret saved in the CLI, in the dashboard, or by a teammate shows up at your next prompt.
+- **Updates live.** A secret that you or a teammate saves shows up at your next prompt.
 - **Keeps every version.** Each change is a new version, and rollback is one click.
 - **Replaces `.env` files.** Admins can warn about, block, or migrate and delete `.env` files on team machines.
 - **Runs on your own Cloudflare account.** One Worker, one D1 database, and one KV namespace. No third party sees your data.
 
 ## Get started
 
-**1. Deploy.** Click the button above. Enter your email as `ADMIN_EMAIL`. For `EMAIL_FROM`, enter a sender address on a domain with Email Sending enabled to [email invites](#invitation-emails), or keep `none`. Optionally, enter your team's name as `TEAM_NAME`. The CLI saves the deployment under this name on each laptop.
+**1. Deploy.** Click the button above. Enter your email as `ADMIN_EMAIL`, and a random string of at least 16 characters that you make up as `SETUP_TOKEN`. For `EMAIL_FROM`, enter a sender address on a domain with Email Sending enabled to [email invites](#invitation-emails), or keep `none`. Optionally, enter your team's name as `TEAM_NAME`. The CLI saves the deployment under this name on each laptop.
 
-**2. Create your admin passkey.** Open `https://<your-worker>.workers.dev/dashboard/` and sign up with the same email. If [invitation emails](#invitation-emails) are on, the dashboard emails you a setup link instead. Passkeys use Touch ID, Face ID, or a security key. There are no passwords.
+**2. Create your admin passkey.** Open `https://<your-worker>.workers.dev/dashboard/` and sign up with the same email and setup token. If [invitation emails](#invitation-emails) are on, the dashboard emails you a setup link instead. Passkeys use Touch ID, Face ID, or a security key. There are no passwords.
 
 **3. Install the CLI.** It needs Node.js 22 or newer.
 
@@ -88,7 +88,7 @@ noenv secret set API_KEY    # prompts for the value and keeps it off screen
 
 Set the environment with `environment = "staging"` in a `.noenv` file in the repo, or with `NOENV_ENVIRONMENT=staging` for one shell.
 
-The dashboard does the rest: projects, secrets and history, team invites, policies, and devices.
+The dashboard does the rest: projects, secret history and rollback, team invites, policies, and devices. Values are set with `noenv secret set`, so each version is signed with the environment key.
 
 Commit the `.noenv` file that `noenv init` creates. It tells teammates' shells that the repo uses noenv, so access problems show up as messages instead of silence.
 
@@ -112,7 +112,7 @@ environment = "production"           # optional: the noenv environment to copy f
 env = "staging"                      # optional: passed to wrangler as --env
 ```
 
-The keys in this list start selected in `noenv wrangler`. Without a terminal, for example from an agent or CI, `noenv wrangler` pushes this list. The CLI uses the `wrangler` in the repo's `node_modules`, or the one on your `PATH`. Changes made in the dashboard do not push to Wrangler. Run `noenv wrangler` after them.
+The keys in this list start selected in `noenv wrangler`. Without a terminal, for example from an agent or CI, `noenv wrangler` pushes this list. The CLI uses the `wrangler` in the repo's `node_modules`, or the one on your `PATH`. Rollbacks made in the dashboard do not push to Wrangler. Run `noenv wrangler` after them.
 
 ## Agents, scripts, and CI
 

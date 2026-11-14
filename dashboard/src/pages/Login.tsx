@@ -6,8 +6,9 @@ import { setUpAdmin, signInWithPasskey } from "../passkeys.ts";
 import { errorMessage, useResource } from "../use-resource.ts";
 
 export function Login({ onSignedIn }: { onSignedIn: () => void }) {
-  const setup = useResource(() => api<{ available: boolean; email: boolean }>("GET", "/v1/setup"), []);
+  const setup = useResource(() => api<{ available: boolean; email: boolean; missingToken: boolean }>("GET", "/v1/setup"), []);
   const [email, setEmail] = useState("");
+  const [token, setToken] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [sent, setSent] = useState(false);
@@ -61,13 +62,24 @@ export function Login({ onSignedIn }: { onSignedIn: () => void }) {
     );
   }
 
-  if (setup.data?.available) {
-    const submit = (event: FormEvent) => (event.preventDefault(), run(() => setUpAdmin(email)));
+  if (setup.data?.missingToken) {
     return (
       <AuthScreen title="Set up noenv">
-        <p className="muted">Use the admin email you entered when you deployed.</p>
+        <p className="muted">
+          This deployment has no setup token. Add a <code>SETUP_TOKEN</code> secret of at least 16 random characters to the Worker, then reload this page.
+        </p>
+      </AuthScreen>
+    );
+  }
+
+  if (setup.data?.available) {
+    const submit = (event: FormEvent) => (event.preventDefault(), run(() => setUpAdmin(email, token)));
+    return (
+      <AuthScreen title="Set up noenv">
+        <p className="muted">Use the admin email and the setup token you entered when you deployed.</p>
         <form onSubmit={submit} style={{ display: "grid", gap: 12, width: "100%" }}>
           <input type="email" placeholder="you@company.com" aria-label="Admin email" value={email} onChange={(event) => setEmail(event.target.value)} required autoFocus />
+          <input type="password" placeholder="Setup token" aria-label="Setup token" autoComplete="off" value={token} onChange={(event) => setToken(event.target.value)} required />
           <button className="btn primary wide" disabled={busy} aria-busy={busy}>
             Create admin passkey
           </button>

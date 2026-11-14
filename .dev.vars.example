@@ -1,2 +1,3 @@
 ADMIN_EMAIL=you@example.com
+SETUP_TOKEN=replace-with-16-or-more-random-characters
 EMAIL_FROM=none # optional: noenv@your-domain.com to email invites

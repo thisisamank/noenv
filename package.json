@@ -26,6 +26,9 @@
       "ADMIN_EMAIL": {
         "description": "Your email. Only this address can create the first admin passkey on the dashboard."
       },
+      "SETUP_TOKEN": {
+        "description": "A random string of at least 16 characters that you make up and keep. The dashboard asks for it with the admin email to create the first admin passkey, so nobody who only knows your email can claim the deployment. Not needed when `EMAIL_FROM` is set."
+      },
       "EMAIL_FROM": {
         "description": "Optional. The address invites are sent from, on a domain with [Cloudflare Email Sending](https://developers.cloudflare.com/email-service/) enabled, like `noenv@example.com`. Type `none` to skip email and share invite links yourself."
       },

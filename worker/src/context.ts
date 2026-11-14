@@ -5,7 +5,9 @@ export type { Role } from "@noenv/policy";
 export type Env = {
   DB: D1Database;
   SECRETS: KVNamespace;
+  AUTH_LIMIT?: RateLimit;
   ADMIN_EMAIL?: string;
+  SETUP_TOKEN?: string;
   EMAIL?: SendEmail;
   EMAIL_FROM?: string;
   TEAM_NAME?: string;
