@@ -1,6 +1,6 @@
 {
   "name": "@thisisamank/noenv-cli",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Encrypted environment variables that load when you cd into a repo. CLI for noenv.",
   "type": "module",
   "bin": {

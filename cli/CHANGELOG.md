@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.4.0 — 2026-11-14
+
+A security release. Update the CLI, then have an editor run `noenv secret sign` in each environment.
+
+### Added
+
+- `noenv secret sign` re-saves secrets that an older noenv or the dashboard wrote, after you check their names.
+- `noenv rotate` makes a new environment key, re-encrypts every secret, and shares the key with the current key holders.
+- `noenv trust` accepts a new environment key after an admin rotated it.
+- `noenv status` and `noenv grant` show key fingerprints, so you can check a key with its owner.
+
+### Changed
+
+- Each secret version is signed with the environment key. The CLI skips a value without a valid signature, so a server or a stolen session token cannot forge one. After you update, an editor runs `noenv secret sign` once in each environment.
+- The CLI checks that the server's environment key matches the key it unwraps, and pins it on first use.
+- Terminal sign-in shows your device in the dashboard. You type the code and confirm with your passkey.
+- Delete mode no longer uploads `.env` values in the background. A file with new names waits for `noenv migrate`.
+- Names that change how code runs, such as `PATH`, `PROMPT_COMMAND`, `NODE_OPTIONS`, `LD_*` and `GIT_*`, are reserved. The CLI never exports them.
+
 ## 0.3.0 — 2026-11-13
 
 Each repository's `.noenv` file names its deployment, and every teammate gets the same account name from the deployment. noenv no longer guesses the account from the git `origin`.
