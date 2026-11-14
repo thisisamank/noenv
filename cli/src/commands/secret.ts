@@ -1,8 +1,10 @@
-import { ENV_VAR_NAME } from "@noenv/config/names";
+import { isSecretName } from "@noenv/config/names";
 import { api, environmentPath } from "../api.ts";
-import { fetchBundle } from "../bundle.ts";
+import { isReservedName } from "@noenv/config/names";
+import { decryptUnsigned } from "@noenv/crypto";
+import { fetchBundle, fetchRawBundle, openBundle, openEnvironmentKey } from "../bundle.ts";
 import { inProject } from "../context.ts";
-import { readSecretValue } from "../prompt.ts";
+import { confirm, readSecretValue } from "../prompt.ts";
 import { remoteSecretStore } from "../secret-store.ts";
 import type { Target } from "../target.ts";
 import { markChanged } from "../watch.ts";
@@ -17,10 +19,11 @@ export async function secretCommand([action, ...args]: string[]): Promise<void> 
     list: listSecrets,
     history: secretHistory,
     rollback: rollbackSecret,
+    sign: signSecrets,
   };
   const handler = handlers[action ?? ""];
   if (!handler) {
-    throw new Error("usage: noenv secret set|list|history|rollback");
+    throw new Error("usage: noenv secret set|list|history|rollback|sign");
   }
   await handler(args);
 }
@@ -92,6 +95,31 @@ async function rollbackSecret([name, version]: string[]): Promise<void> {
   });
 }
 
+async function signSecrets(args: string[]): Promise<void> {
+  const { deployment, token, identity, target } = await inProject();
+  const raw = await fetchRawBundle(deployment, token, target.repo, target.environment);
+  const bundle = await openBundle(raw, identity.privateKey, target.environment);
+  if (bundle.unsigned.length === 0) {
+    console.log(`Every secret in ${target.repo} (${target.environment}) is signed`);
+    return;
+  }
+
+  console.log(`These secrets have no signature from a holder of the ${target.environment} key: ${bundle.unsigned.join(", ")}`);
+  console.log("An older noenv or the dashboard wrote them, or someone without the key did. Check that you expect each name.");
+  if (!args.includes("--yes") && !(await confirm(`Sign ${bundle.unsigned.length} secrets with their current values?`))) {
+    throw new Error("cancelled, nothing was signed (pass --yes to sign without a terminal)");
+  }
+
+  const environmentPrivateKey = await openEnvironmentKey(raw, identity.privateKey);
+  const store = remoteSecretStore(deployment, token, identity, target.repo, target.environment, bundle);
+  for (const { name, sealed } of raw.secrets) {
+    if (!bundle.unsigned.includes(name) || isReservedName(name)) continue;
+    const value = await decryptUnsigned(environmentPrivateKey, sealed, { projectId: raw.projectId, environment: target.environment, name });
+    console.log(`Signed ${name} as version ${await store.set(name, value)}`);
+  }
+  await markChanged(deployment, target.repo, target.environment);
+}
+
 async function syncToWrangler(target: Target, name: string, value: () => Promise<string>): Promise<void> {
   if (!target.wrangler.secrets.includes(name)) return;
   if (wranglerSource(target) !== target.environment) {
@@ -107,7 +135,7 @@ async function syncToWrangler(target: Target, name: string, value: () => Promise
 }
 
 function requireName(name: string | undefined): asserts name is string {
-  if (!name || !ENV_VAR_NAME.test(name)) {
-    throw new Error("the secret name must be a valid environment variable name");
+  if (!name || !isSecretName(name)) {
+    throw new Error("the secret name must be a valid environment variable name that noenv does not reserve (such as PATH, NODE_OPTIONS, LD_*, GIT_*)");
   }
 }

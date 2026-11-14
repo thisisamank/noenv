@@ -58,6 +58,7 @@ test("an environment key is shared end to end and secrets decrypt for members", 
   assert.equal((await api(admin, "PUT", `${PROJECT_PATH}/members/usr_missing`, { role: "reader" })).status, 404);
   assert.equal((await api(admin, "PUT", `${PROJECT_PATH}/members/usr_member`, { role: "editor" })).status, 200);
 
+  assert.equal((await api(outsider, "GET", "/v1/users/lookup?email=usr_member@example.com")).status, 403);
   const found = await api(admin, "GET", "/v1/users/lookup?email=USR_MEMBER@example.com");
   assert.equal(found.body.id, "usr_member");
   const memberPublicKey = found.body.publicKey;
@@ -72,7 +73,7 @@ test("an environment key is shared end to end and secrets decrypt for members", 
   const context = { projectId: bundleBefore.body.projectId, environment: "development", name: "API_KEY" };
   const memberEnvironmentKey = await unwrapPrivateKey(bundleBefore.body.wrappedKey, memberKeys.privateKey);
 
-  const sealed = await encryptSecret(await importPublicKey(bundleBefore.body.publicKey), "s3cret", context);
+  const sealed = await encryptSecret(memberEnvironmentKey, "s3cret", context);
   assert.equal((await api(member, "PUT", `${ENVIRONMENT_PATH}/secrets/API_KEY`, sealed)).status, 201);
 
   const bundle = await api(member, "GET", `${ENVIRONMENT_PATH}/bundle`);

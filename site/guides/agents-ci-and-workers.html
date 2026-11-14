@@ -124,7 +124,7 @@ secrets = ["STRIPE_KEY", "API_KEY"]
 environment = "production"   <span class="c"># optional: the noenv environment to copy from</span>
 env = "staging"              <span class="c"># optional: passed to wrangler as --env</span></code></pre>
 <p>These keys start selected in the list. Without a terminal, for example in CI, <code>noenv wrangler</code> pushes this list. The CLI uses the <code>wrangler</code> in the repository's <code>node_modules</code>, or the one on your <code>PATH</code>.</p>
-<div class="note warn"><svg class="icon"><use href="/icons.svg#alert"/></svg><div>Changes made in the dashboard do not push to Wrangler. Run <code>noenv wrangler</code> after them.</div></div>
+<div class="note warn"><svg class="icon"><use href="/icons.svg#alert"/></svg><div>Rollbacks made in the dashboard do not push to Wrangler. Run <code>noenv wrangler</code> after them.</div></div>
 
 <nav class="pager" aria-label="More guides"><a href="/guides/multiple-accounts"><span>Previous</span><b>Multiple accounts</b></a><a class="next" href="/guides/team-and-access"><span>Next</span><b>Team and access</b></a></nav>
       </article>

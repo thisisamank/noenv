@@ -6,6 +6,7 @@ export type Sealed = {
   ephemeralPublicKey: string;
   iv: string;
   ciphertext: string;
+  mac?: string;
 };
 
 export async function sealTo(

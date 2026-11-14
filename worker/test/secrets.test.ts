@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { addUser, call, PROJECT_PATH, PUBLIC_KEY, REPO, startWorker, type TestWorker } from "./helpers.ts";
 
 const BASE = `${PROJECT_PATH}/environments/development`;
-const SEALED = { ephemeralPublicKey: PUBLIC_KEY, iv: "aXY=", ciphertext: "Y2lwaGVy" };
+const MAC = btoa(String.fromCharCode(...new Uint8Array(32).fill(7)));
+const SEALED = { ephemeralPublicKey: PUBLIC_KEY, iv: "aXY=", ciphertext: "Y2lwaGVy", mac: MAC };
 
 let worker: TestWorker;
 const tokens: Record<string, string> = {};
@@ -57,7 +58,14 @@ test("rejects writes from readers", async () => {
 
 test("rejects invalid secret names, repos, and ciphertexts", async () => {
   assert.equal((await as("usr_editor", "PUT", "/secrets/bad-name", SEALED)).status, 400);
+  for (const reserved of ["PROMPT_COMMAND", "PATH", "NODE_OPTIONS", "LD_PRELOAD", "GIT_SSH_COMMAND", "_NOENV_RESTORE", "path"]) {
+    assert.equal((await as("usr_editor", "PUT", `/secrets/${reserved}`, SEALED)).status, 400, reserved);
+  }
   assert.equal((await as("usr_editor", "PUT", "/secrets/API_KEY", { iv: "aXY=", ciphertext: "eA==" })).status, 400);
+  const { mac: _mac, ...unsigned } = SEALED;
+  const withoutMac = await as("usr_editor", "PUT", "/secrets/API_KEY", unsigned);
+  assert.equal(withoutMac.status, 400);
+  assert.match(withoutMac.body.error, /mac/);
 
   const badRepo = "/v1/repos/%E0%A4%A/environments/development/bundle";
   assert.equal((await call(worker.env, "GET", badRepo, { token: tokens.usr_reader })).status, 400);
@@ -67,7 +75,7 @@ test("creates versions, rolls back, and serves the active version in the bundle"
   const first = await as("usr_editor", "PUT", "/secrets/DATABASE_URL", SEALED);
   assert.deepEqual([first.status, first.body], [201, { name: "DATABASE_URL", version: 1 }]);
 
-  const updated = { ephemeralPublicKey: PUBLIC_KEY, iv: "aXYy", ciphertext: "bmV3" };
+  const updated = { ephemeralPublicKey: PUBLIC_KEY, iv: "aXYy", ciphertext: "bmV3", mac: MAC };
   assert.equal((await as("usr_editor", "PUT", "/secrets/DATABASE_URL", updated)).body.version, 2);
 
   const rollback = await as("usr_editor", "POST", "/secrets/DATABASE_URL/rollback", { version: 1 });

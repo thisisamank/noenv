@@ -1,13 +1,4 @@
-import { encryptSecret, exportPublicKey, generateKeyPair, importPublicKey, wrapPrivateKey, type Sealed } from "@noenv/crypto";
-import type { Project } from "./types.ts";
-
-export async function sealSecret(project: Project, environment: string, name: string, value: string): Promise<Sealed> {
-  const publicKey = project.environments.find((candidate) => candidate.name === environment)?.publicKey;
-  if (!publicKey) {
-    throw new Error(`environment ${environment} was not found`);
-  }
-  return encryptSecret(await importPublicKey(publicKey), value, { projectId: project.id, environment, name });
-}
+import { exportPublicKey, generateKeyPair, importPublicKey, wrapPrivateKey, type Sealed } from "@noenv/crypto";
 
 export async function createEnvironmentKeys(ownerPublicKey: string): Promise<{ publicKey: string; wrappedKey: Sealed }> {
   const keys = await generateKeyPair();

@@ -25,8 +25,8 @@ export function remoteSecretStore(
       return (await bundle()).secrets[name];
     },
     async set(name, value) {
-      const { environmentPublicKey, projectId } = await bundle();
-      const sealed = await encryptSecret(environmentPublicKey, value, { projectId, environment, name });
+      const { environmentPrivateKey, projectId } = await bundle();
+      const sealed = await encryptSecret(environmentPrivateKey, value, { projectId, environment, name });
       const path = `${environmentPath(repo, environment)}/secrets/${name}`;
       const { version } = await api<{ version: number }>(deployment, "PUT", path, { token, body: sealed });
       cached = null;

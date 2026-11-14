@@ -1,0 +1,3 @@
+ALTER TABLE secret_versions ADD COLUMN mac TEXT;
+ALTER TABLE secret_versions ADD COLUMN key_version INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE environments ADD COLUMN key_version INTEGER NOT NULL DEFAULT 1;

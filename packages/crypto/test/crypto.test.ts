@@ -2,6 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   decryptSecret,
+  decryptUnsigned,
+  fingerprint,
+  publicKeyOf,
   encryptSecret,
   exportPrivateKey,
   exportPublicKey,
@@ -14,11 +17,10 @@ import {
 
 const context = { projectId: "prj_123", environment: "development", name: "API_KEY" };
 
-test("anyone with the environment public key can encrypt, only the private key decrypts", async () => {
+test("only a holder of the environment private key can write a secret that decrypts", async () => {
   const environment = await generateKeyPair();
-  const publicOnly = await importPublicKey(await exportPublicKey(environment.publicKey));
 
-  const sealed = await encryptSecret(publicOnly, "s3cret", context);
+  const sealed = await encryptSecret(environment.privateKey, "s3cret", context);
   assert.ok(!sealed.ciphertext.includes("s3cret"));
   assert.equal(await decryptSecret(environment.privateKey, sealed, context), "s3cret");
 
@@ -26,16 +28,34 @@ test("anyone with the environment public key can encrypt, only the private key d
   await assert.rejects(decryptSecret(stranger.privateKey, sealed, context));
 });
 
+test("rejects a secret sealed to the public key without the MAC, as a server could forge it", async () => {
+  const environment = await generateKeyPair();
+  const forger = await encryptSecret((await generateKeyPair()).privateKey, "evil", context);
+  const sealed = await encryptSecret(environment.privateKey, "s3cret", context);
+  const { mac: _mac, ...unsigned } = sealed;
+
+  await assert.rejects(decryptSecret(environment.privateKey, unsigned, context), /no valid signature/);
+  await assert.rejects(decryptSecret(environment.privateKey, { ...sealed, mac: forger.mac }, context), /no valid signature/);
+  assert.equal(await decryptUnsigned(environment.privateKey, unsigned, context), "s3cret");
+});
+
+test("derives the public key and a stable fingerprint from the private key", async () => {
+  const environment = await generateKeyPair();
+  const publicKey = await exportPublicKey(environment.publicKey);
+  assert.equal(await publicKeyOf(environment.privateKey), publicKey);
+  assert.match(await fingerprint(publicKey), /^[0-9a-f]{4}(-[0-9a-f]{4}){3}$/);
+});
+
 test("rejects a ciphertext moved to another secret name", async () => {
   const environment = await generateKeyPair();
-  const sealed = await encryptSecret(environment.publicKey, "s3cret", context);
+  const sealed = await encryptSecret(environment.privateKey, "s3cret", context);
 
   await assert.rejects(decryptSecret(environment.privateKey, sealed, { ...context, name: "OTHER" }));
 });
 
 test("rejects a tampered ciphertext", async () => {
   const environment = await generateKeyPair();
-  const sealed = await encryptSecret(environment.publicKey, "s3cret", context);
+  const sealed = await encryptSecret(environment.privateKey, "s3cret", context);
   const tampered = { ...sealed, ciphertext: sealed.ciphertext.replace(/^./, (c) => (c === "A" ? "B" : "A")) };
 
   await assert.rejects(decryptSecret(environment.privateKey, tampered, context));
@@ -47,7 +67,7 @@ test("shares an environment private key with a user through their public key", a
   const userPrivateKey = await importPrivateKey(await exportPrivateKey(user.privateKey));
 
   const environment = await generateKeyPair();
-  const sealed = await encryptSecret(environment.publicKey, "s3cret", context);
+  const sealed = await encryptSecret(environment.privateKey, "s3cret", context);
   const wrapped = await wrapPrivateKey(environment.privateKey, userPublicKey);
 
   const unwrapped = await unwrapPrivateKey(wrapped, userPrivateKey);

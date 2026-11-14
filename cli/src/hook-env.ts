@@ -1,4 +1,4 @@
-import { openBundle } from "./bundle.ts";
+import { describeSkipped, openBundle } from "./bundle.ts";
 import type { Deployment } from "./deployment.ts";
 import { loadIdentity } from "./identity.ts";
 import { readCache, type CacheEntry } from "./refresh.ts";
@@ -141,6 +141,7 @@ async function openEntry(
   if (entry.blocked) return null;
   try {
     const bundle = await openBundle(entry.raw, privateKey, target.environment);
+    messages.push(...describeSkipped(bundle));
     return { secrets: bundle.secrets, revision: bundle.revision };
   } catch (error) {
     messages.push(`could not decrypt secrets for ${target.repo} (${target.environment}): ${describe(error)}`);
@@ -172,7 +173,7 @@ async function signIn(
     if (started || !(await input.pollerRunning(deployment))) input.startPoller(deployment);
     if (started || state?.notified !== pending.userCode) {
       const account = deployment.account ? ` to ${deployment.account}` : "";
-      messages.push(`sign in${account} to load secrets: open ${pending.url} and confirm the code ${pending.userCode}`);
+      messages.push(`sign in${account} to load secrets: open ${pending.url} and enter the code ${pending.userCode}`);
     }
     return { ...empty, retry: true, notified: pending.userCode };
   } catch (error) {

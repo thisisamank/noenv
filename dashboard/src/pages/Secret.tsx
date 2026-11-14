@@ -1,33 +1,25 @@
-import { ENV_VAR_NAME } from "@noenv/config/names";
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { api, environmentPath } from "../api.ts";
 import { findProject, useApp } from "../app-context.ts";
 import { Avatar } from "../components/Avatar.tsx";
 import { EnvironmentLabel } from "../components/Environment.tsx";
 import { ErrorLine, Loading, useToast } from "../components/Feedback.tsx";
 import { Icon } from "../components/Icon.tsx";
-import { sealSecret } from "../crypto.ts";
 import { shortRepo, timeAgo } from "../format.ts";
-import { href, navigate } from "../router.ts";
+import { href } from "../router.ts";
 import type { Project, VersionRow } from "../types.ts";
 import { errorMessage, useResource } from "../use-resource.ts";
-import { NEW_SECRET } from "./Project.tsx";
 
 export function SecretPage({ repo, environment, name }: { repo: string; environment: string; name: string }) {
   const { projects } = useApp();
   const project = findProject(projects.data, repo);
-  const isNew = name === NEW_SECRET;
   const history = useResource(
-    () =>
-      isNew
-        ? Promise.resolve([])
-        : api<{ versions: VersionRow[] }>("GET", `${environmentPath(repo, environment)}/secrets/${name}/versions`).then((body) => body.versions),
+    () => api<{ versions: VersionRow[] }>("GET", `${environmentPath(repo, environment)}/secrets/${name}/versions`).then((body) => body.versions),
     [repo, environment, name],
   );
 
   if (!project) return projects.loading ? <Loading /> : <ErrorLine message={`No project for ${repo}.`} />;
 
-  const latest = history.data?.[0]?.version ?? 0;
   return (
     <>
       <div className="crumb">
@@ -41,110 +33,33 @@ export function SecretPage({ repo, environment, name }: { repo: string; environm
       </div>
       <div className="head">
         <h1 className="mono">
-          {isNew ? "New secret" : name}
+          {name}
         </h1>
       </div>
 
-      <div className={isNew ? "" : "split history"}>
+      <div className="split history">
         <section>
-          <ValueForm project={project} environment={environment} name={isNew ? null : name} nextVersion={latest + 1} onSaved={history.reload} />
+          <CliValueHint name={name} canWrite={project.role !== "reader"} />
         </section>
-        {!isNew && (
-          <aside className="card">
-            <div className="card-head">History</div>
-            {history.loading && !history.data ? <Loading /> : <History project={project} environment={environment} name={name} versions={history.data ?? []} onRestored={history.reload} />}
-            <ErrorLine message={history.error} />
-          </aside>
-        )}
+        <aside className="card">
+          <div className="card-head">History</div>
+          {history.loading && !history.data ? <Loading /> : <History project={project} environment={environment} name={name} versions={history.data ?? []} onRestored={history.reload} />}
+          <ErrorLine message={history.error} />
+        </aside>
       </div>
     </>
   );
 }
 
-function ValueForm({
-  project,
-  environment,
-  name,
-  nextVersion,
-  onSaved,
-}: {
-  project: Project;
-  environment: string;
-  name: string | null;
-  nextVersion: number;
-  onSaved: () => void;
-}) {
-  const { projects } = useApp();
-  const notify = useToast();
-  const [newName, setNewName] = useState("");
-  const [value, setValue] = useState("");
-  const [visible, setVisible] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string>();
-  const canWrite = project.role !== "reader";
-
-  async function save(event: FormEvent) {
-    event.preventDefault();
-    const secretName = name ?? newName.trim();
-    if (!ENV_VAR_NAME.test(secretName)) {
-      setError("Use letters, digits, and underscores, starting with a letter or underscore.");
-      return;
-    }
-    setBusy(true);
-    setError(undefined);
-    try {
-      const sealed = await sealSecret(project, environment, secretName, value);
-      const saved = await api<{ version: number }>("PUT", `${environmentPath(project.repo, environment)}/secrets/${secretName}`, sealed);
-      setValue("");
-      notify(`Saved ${secretName} as v${saved.version}`);
-      projects.reload();
-      if (name) onSaved();
-      else navigate({ page: "secret", repo: project.repo, environment, name: secretName });
-    } catch (caught) {
-      setError(errorMessage(caught));
-    } finally {
-      setBusy(false);
-    }
-  }
-
+function CliValueHint({ name, canWrite }: { name: string; canWrite: boolean }) {
   return (
-    <div className="panel">
-      <form className="editor" onSubmit={save}>
-        {!name && (
-          <label className="field">
-            <span>Name</span>
-            <input className="mono" placeholder="DATABASE_URL" value={newName} onChange={(event) => setNewName(event.target.value.toUpperCase())} required autoFocus />
-          </label>
-        )}
-        <label className="field">
-          <span>{name ? "New value" : "Value"}</span>
-          <div className="reveal">
-            <textarea
-              placeholder="Paste value"
-              value={value}
-              onChange={(event) => setValue(event.target.value)}
-              style={visible ? undefined : ({ WebkitTextSecurity: "disc" } as React.CSSProperties)}
-              autoComplete="off"
-              spellCheck={false}
-              disabled={!canWrite}
-              required
-            />
-            <button type="button" className="icon-btn" aria-label={visible ? "Hide value" : "Show value"} aria-pressed={visible} onClick={() => setVisible(!visible)}>
-              <Icon name="eye" />
-            </button>
-          </div>
-        </label>
-        <ErrorLine message={error} />
-        <div className="toolbar" style={{ margin: 0 }}>
-          <span className="lock-line">
-            <Icon name="lock" />
-            Encrypted in your browser
-          </span>
-          <button className="btn primary" disabled={busy || !canWrite || !value || (!name && !newName.trim())} aria-busy={busy}>
-            {name ? `Save as v${nextVersion}` : "Save"}
-          </button>
-        </div>
-      </form>
+    <div className="panel cli-hint">
+      <p className="muted">
+        {canWrite
+          ? "Set a new value from your terminal. The CLI signs each version with the environment key, so a value written without that key never loads."
+          : "Readers can see the history. An editor sets new values from the terminal."}
+      </p>
+      {canWrite && <pre className="mono">noenv secret set {name}</pre>}
     </div>
   );
 }

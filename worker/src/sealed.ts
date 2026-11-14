@@ -3,6 +3,16 @@ import { HttpError } from "./http.ts";
 
 const MAX_CIPHERTEXT_LENGTH = 100_000;
 const PUBLIC_KEY = /^[A-Za-z0-9+/]{80,120}={0,2}$/;
+const MAC = /^[A-Za-z0-9+/]{43}=$/;
+
+export function parseSignedSecret(value: unknown): Sealed {
+  const sealed = parseSealed(value, "body");
+  const { mac } = (value ?? {}) as Record<string, unknown>;
+  if (typeof mac !== "string" || !MAC.test(mac)) {
+    throw new HttpError(400, "body must carry a mac, update the noenv CLI and set the value with `noenv secret set`");
+  }
+  return { ...sealed, mac };
+}
 
 export function parseSealed(value: unknown, field: string): Sealed {
   const { ephemeralPublicKey, iv, ciphertext } = (value ?? {}) as Record<string, unknown>;

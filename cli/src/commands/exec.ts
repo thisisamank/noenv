@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { constants } from "node:os";
-import { openBundle } from "../bundle.ts";
+import { describeSkipped, openBundle } from "../bundle.ts";
 import { resolveDeployment } from "../deployment.ts";
 import { decodeState } from "../hook-env.ts";
 import { ensureIdentity, loadIdentity } from "../identity.ts";
@@ -63,7 +63,9 @@ async function projectSecrets(env: NodeJS.ProcessEnv): Promise<Record<string, st
   for (const line of entry.notes) note(line);
   if (entry.blocked) throw new Error(`secrets for ${label} were not loaded because of the .env policy`);
 
-  const { secrets } = await openBundle(entry.raw, identity.privateKey, target.environment);
+  const bundle = await openBundle(entry.raw, identity.privateKey, target.environment);
+  for (const line of describeSkipped(bundle)) note(line);
+  const { secrets } = bundle;
   note(`loaded ${Object.keys(secrets).length} secrets for ${label}${deployment.account ? ` from ${deployment.account}` : ""}`);
   const missing = target.requiredSecrets.filter((name) => !(name in secrets));
   if (missing.length > 0) note(`missing required secrets: ${missing.join(", ")}`);

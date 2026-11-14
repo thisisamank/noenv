@@ -12,8 +12,6 @@ import type { Project, SecretRow } from "../types.ts";
 import { errorMessage, useResource } from "../use-resource.ts";
 import { ProjectMembers } from "./ProjectMembers.tsx";
 
-export const NEW_SECRET = "~new";
-
 export function ProjectPage({ repo, environment }: { repo: string; environment?: string }) {
   const { projects } = useApp();
   const project = findProject(projects.data, repo);
@@ -133,12 +131,7 @@ function Secrets({ project, environment }: { project: Project; environment: stri
           <Icon name="search" />
           <input type="search" placeholder="Search secrets" aria-label="Search secrets" value={query} onChange={(event) => setQuery(event.target.value)} />
         </label>
-        {canWrite && (
-          <a className="btn primary" href={secretHref(NEW_SECRET)}>
-            <Icon name="plus" />
-            New secret
-          </a>
-        )}
+        {canWrite && <code className="cli-inline">noenv secret set NAME</code>}
       </div>
       <div className="panel">
         {secrets.loading && !secrets.data ? (
@@ -182,7 +175,7 @@ function Secrets({ project, environment }: { project: Project; environment: stri
                   <td>
                     <div className="row-actions">
                       <a className="btn sm" href={secretHref(secret.name)}>
-                        {canWrite ? "Edit" : "History"}
+                        History
                       </a>
                     </div>
                   </td>
