@@ -49,7 +49,7 @@ export function App() {
     return <Login onSignedIn={me.reload} />;
   }
   if (route.page === "activate") {
-    return <Activate code={route.code} />;
+    return <Activate />;
   }
 
   const attention = (devices.data ?? []).filter((device) => device.compliance.some((report) => !report.compliant)).length;

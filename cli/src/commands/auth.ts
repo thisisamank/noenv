@@ -1,10 +1,11 @@
+import { fingerprint } from "@noenv/crypto";
 import { api, environmentPath } from "../api.ts";
 import { currentDeployment, requireDeployment } from "../context.ts";
 import { deploymentAt, namedDeployment, type Deployment } from "../deployment.ts";
 import { loadSession, openBrowser, readPendingSignIn, startSignIn, waitForSignIn } from "../session.ts";
 import { findTarget } from "../target.ts";
 
-type Me = { email: string; isAdmin: boolean };
+type Me = { email: string; isAdmin: boolean; publicKey: string | null };
 
 export async function authCommand(args: string[]): Promise<void> {
   if (args[0] === "--wait") {
@@ -16,7 +17,7 @@ export async function authCommand(args: string[]): Promise<void> {
 
   const deployment = args[0] ? await namedDeployment(args[0]) : await currentDeployment();
   const { pending, started } = await startSignIn(deployment);
-  console.log(`Open ${pending.url} and confirm the code ${pending.userCode}`);
+  console.log(`Open ${pending.url} and enter the code ${pending.userCode}`);
   if (started) openBrowser(pending.url);
 
   if (!(await waitForSignIn(deployment, pending))) {
@@ -39,6 +40,7 @@ export async function statusCommand(): Promise<void> {
   }
   const me = await api<Me>(deployment, "GET", "/v1/me", { token });
   console.log(`Signed in:   ${me.email}${me.isAdmin ? " (organization admin)" : ""}`);
+  console.log(`Your key:    ${me.publicKey ? await fingerprint(me.publicKey) : "not registered yet"}`);
 
   if (!target) {
     console.log("Project:     none (not in a git repository with an origin)");

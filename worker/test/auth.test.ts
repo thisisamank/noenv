@@ -99,22 +99,42 @@ test("cookie sessions reject cross-origin writes, bearer tokens do not need an o
   assert.equal((await api("PUT", "/v1/me/public-key", { token: admin, origin: null, body: { publicKey } })).status, 409);
 });
 
-test("a signed-in browser approves a CLI device code", async () => {
-  const device = (await api("POST", "/v1/auth/device")).body;
+test("a signed-in browser sees the device and approves its code with a passkey", async () => {
+  const started = await call(worker.env, "POST", "/v1/auth/device", {
+    body: { deviceName: "ana-mbp" },
+    headers: { "CF-Connecting-IP": "203.0.113.7" },
+  });
+  const device = started.body;
+  assert.equal(device.verificationUriComplete, `${ORIGIN}/activate`);
   const redirect = await api("GET", `/activate?code=${device.userCode}`);
   assert.equal(redirect.status, 302);
-  assert.equal(redirect.headers.get("Location"), `${ORIGIN}/dashboard/#/activate/${device.userCode}`);
+  assert.equal(redirect.headers.get("Location"), `${ORIGIN}/dashboard/#/activate`);
 
-  const poll = () => api("POST", "/v1/auth/token", { body: { deviceCode: device.deviceCode, deviceName: "ana-mbp" } });
+  const poll = () => api("POST", "/v1/auth/token", { body: { deviceCode: device.deviceCode } });
   assert.deepEqual((await poll()).body, { error: "authorization_pending" });
 
   const session = sessionFrom((await signIn(ana)).result);
-  assert.equal((await api("POST", "/v1/auth/activate", { body: { code: device.userCode } })).status, 401);
-  assert.equal((await api("POST", "/v1/auth/activate", { cookie: session, body: { code: device.userCode.toLowerCase() } })).status, 200);
+  const described = await api("POST", "/v1/auth/activate/device", { cookie: session, body: { code: device.userCode } });
+  assert.equal(described.body.deviceName, "ana-mbp");
+  assert.equal(described.body.ip, "203.0.113.7");
+
+  const fresh = async (authenticator: TestAuthenticator) => {
+    const options = await api("POST", "/v1/auth/passkeys/login/options");
+    return authenticator.assert(options.body, ORIGIN);
+  };
+
+  assert.equal((await api("POST", "/v1/auth/activate", { body: { code: device.userCode, response: await fresh(ana) } })).status, 401);
+  assert.equal((await api("POST", "/v1/auth/activate", { cookie: session, body: { code: device.userCode } })).status, 401);
+  assert.equal((await poll()).body.error, "authorization_pending");
+
+  const approved = await api("POST", "/v1/auth/activate", { cookie: session, body: { code: device.userCode.toLowerCase(), response: await fresh(ana) } });
+  assert.equal(approved.status, 200, JSON.stringify(approved.body));
 
   const issued = await poll();
   const me = await api("GET", "/v1/me", { token: issued.body.token, origin: null });
   assert.equal(me.body.email, "ana@example.com");
+  const { devices } = (await api("GET", "/v1/devices", { token: admin })).body;
+  assert.ok(devices.some((entry: any) => entry.name === "ana-mbp"));
   assert.deepEqual((await poll()).body, { error: "expired_token" });
 });
 
@@ -159,4 +179,19 @@ test("an invite cannot be cancelled for someone who joined or is an admin", asyn
   const joined = users.find((user: any) => user.email === "ana@example.com");
   assert.equal((await api("DELETE", `/v1/users/${joined.id}/invite`, { token: admin })).status, 409);
   assert.equal((await api("DELETE", "/v1/users/usr_admin/invite", { token: admin })).status, 409);
+});
+
+test("a recovery invite replaces the lost passkey and ends old sessions", async () => {
+  const oldSession = sessionFrom((await signIn(ana)).result);
+  const { users } = (await api("GET", "/v1/users", { token: admin })).body;
+  const anaId = users.find((user: any) => user.email === "ana@example.com").id;
+  const renewed = await api("POST", `/v1/users/${anaId}/invite`, { token: admin });
+  const token = renewed.body.inviteUrl.split("/join/")[1];
+
+  const replacement = new TestAuthenticator();
+  await join(token, replacement);
+
+  assert.equal((await signIn(ana)).result.status, 401);
+  assert.equal((await api("GET", "/v1/me", { cookie: oldSession })).status, 401);
+  assert.equal((await signIn(replacement)).result.status, 200);
 });

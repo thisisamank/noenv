@@ -52,7 +52,7 @@ export async function startSignIn(deployment: Deployment): Promise<{ pending: Pe
   }
   await removeFile(pendingPath(deployment));
 
-  const device = await api<DeviceResponse>(deployment, "POST", "/v1/auth/device");
+  const device = await api<DeviceResponse>(deployment, "POST", "/v1/auth/device", { body: { deviceName: hostname().slice(0, 100) } });
   if (!device.verificationUriComplete.startsWith(`${deployment.url}/activate`)) {
     throw new Error("the server returned an unexpected sign-in URL");
   }

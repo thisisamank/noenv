@@ -7,6 +7,11 @@ export async function signInWithPasskey(): Promise<void> {
   await api("POST", "/v1/auth/passkeys/login", { response });
 }
 
+export async function passkeyAssertion() {
+  const optionsJSON = await api<Parameters<typeof startAuthentication>[0]["optionsJSON"]>("POST", "/v1/auth/passkeys/login/options");
+  return startAuthentication({ optionsJSON });
+}
+
 export async function createPasskey(token: string): Promise<void> {
   const optionsJSON = await api<Parameters<typeof startRegistration>[0]["optionsJSON"]>("POST", "/v1/auth/passkeys/register/options", { token });
   const response = await startRegistration({ optionsJSON });
@@ -17,8 +22,8 @@ export async function signOut(): Promise<void> {
   await api("POST", "/v1/auth/logout");
 }
 
-export async function setUpAdmin(email: string): Promise<void> {
-  const optionsJSON = await api<Parameters<typeof startRegistration>[0]["optionsJSON"]>("POST", "/v1/setup/options", { email });
+export async function setUpAdmin(email: string, token: string): Promise<void> {
+  const optionsJSON = await api<Parameters<typeof startRegistration>[0]["optionsJSON"]>("POST", "/v1/setup/options", { email, token });
   const response = await startRegistration({ optionsJSON });
-  await api("POST", "/v1/setup", { email, response });
+  await api("POST", "/v1/setup", { email, token, response });
 }

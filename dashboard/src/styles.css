@@ -221,6 +221,9 @@ textarea { height: auto; min-height: 96px; padding: 8px 12px; font-family: "Geis
 .small { font-size: 12px; }
 .text { color: var(--text); font-weight: 500; }
 .code-input { width: 100%; height: 48px; font-size: 22px; letter-spacing: 0.2em; text-align: center; text-transform: uppercase; }
+.device-facts { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 0; font-size: 14px; }
+.device-facts dt { color: var(--muted); }
+.device-facts dd { margin: 0; overflow-wrap: anywhere; }
 .connect-body { display: grid; gap: 12px; justify-items: start; padding: 16px; }
 .connect pre { width: 100%; padding: 12px 16px; border-radius: 6px; background: var(--bg-2); border: 1px solid var(--line); white-space: pre-wrap; word-break: break-all; }
 .side-foot .icon-btn { margin-left: auto; }
@@ -280,3 +283,7 @@ textarea { height: auto; min-height: 96px; padding: 8px 12px; font-family: "Geis
   .spinner, .btn[aria-busy="true"]::before { animation-duration: 2s; }
   .btn:active:not([disabled]), .icon-btn:active { transform: none; }
 }
+.cli-hint { display: grid; gap: 12px; padding: 20px; }
+.cli-hint p { margin: 0; }
+.cli-hint pre { margin: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; overflow-x: auto; }
+.cli-inline { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px; color: var(--muted); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; white-space: nowrap; }

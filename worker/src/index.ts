@@ -1,4 +1,4 @@
-import { approveDevice, redirectToActivation } from "./activation.ts";
+import { approveDevice, describeDevice, redirectToActivation } from "./activation.ts";
 import { listDevices, reportCompliance, signOutDevice } from "./compliance.ts";
 import type { Context, Env, Handler } from "./context.ts";
 import { deploymentInfo } from "./deployment.ts";
@@ -39,8 +39,8 @@ import {
   shareEnvironmentKey,
 } from "./projects.ts";
 import { readRevisions } from "./revisions.ts";
-import { getBundle, listSecrets, listVersions, putSecret, rollbackSecret } from "./secrets.ts";
-import { findUser, getMe, inviteUser, listUsers, setPublicKey } from "./users.ts";
+import { getBundle, listKeyHolders, listSecrets, listVersions, putSecret, rollbackSecret, rotateEnvironmentKey } from "./secrets.ts";
+import { findUser, getMe, inviteUser, listUsers, removeUser, resetPublicKey, setOrganizationAdmin, setPublicKey } from "./users.ts";
 
 export type { Env } from "./context.ts";
 
@@ -60,6 +60,7 @@ const routes: Route[] = [
   route("POST", "/v1/auth/device", startDeviceAuth),
   route("POST", "/v1/auth/token", issueSessionToken),
   route("POST", "/v1/auth/activate", withUser(approveDevice)),
+  route("POST", "/v1/auth/activate/device", withUser(describeDevice)),
   route("POST", "/v1/auth/passkeys/register/options", registrationOptions),
   route("POST", "/v1/auth/passkeys/register", registrationVerify),
   route("POST", "/v1/auth/passkeys/login/options", loginOptions),
@@ -80,6 +81,9 @@ const routes: Route[] = [
   route("POST", "/v1/users", withOrgAdmin(inviteUser)),
   route("POST", "/v1/users/:userId/invite", withOrgAdmin(regenerateInvite)),
   route("DELETE", "/v1/users/:userId/invite", withOrgAdmin(cancelInvite)),
+  route("DELETE", "/v1/users/:userId", withOrgAdmin(removeUser)),
+  route("PUT", "/v1/users/:userId/admin", withOrgAdmin(setOrganizationAdmin)),
+  route("DELETE", "/v1/users/:userId/public-key", withOrgAdmin(resetPublicKey)),
 
   route("GET", "/v1/devices", withOrgAdmin(listDevices)),
   route("DELETE", "/v1/devices/:deviceId", withOrgAdmin(signOutDevice)),
@@ -95,6 +99,8 @@ const routes: Route[] = [
   route("DELETE", `${PROJECT}/members/:userId`, withProject("admin", removeMember)),
   route("POST", `${PROJECT}/environments/:environment`, withProject("admin", createEnvironment)),
   route("PUT", `${ENVIRONMENT}/keys/:userId`, withEnvironment("admin", shareEnvironmentKey)),
+  route("GET", `${ENVIRONMENT}/keys`, withEnvironment("admin", listKeyHolders)),
+  route("POST", `${ENVIRONMENT}/rotate`, withEnvironment("admin", rotateEnvironmentKey)),
 
   route("GET", `${PROJECT}/policies`, withProject("reader", getProjectPolicies)),
   route("PUT", `${PROJECT}/policies/:policy`, withProject("admin", putProjectPolicy)),
@@ -125,7 +131,23 @@ export default {
   },
 } satisfies ExportedHandler<Env>;
 
+const RATE_LIMITED = new Set([
+  "/v1/auth/device",
+  "/v1/auth/passkeys/login/options",
+  "/v1/auth/passkeys/register/options",
+  "/v1/setup/options",
+  "/v1/setup",
+  "/v1/setup/email",
+]);
+
 async function dispatch(request: Request, env: Env, waitUntil: Context["waitUntil"]): Promise<Response> {
+  const { pathname } = new URL(request.url);
+  if (request.method === "POST" && RATE_LIMITED.has(pathname) && env.AUTH_LIMIT) {
+    const key = `${request.headers.get("CF-Connecting-IP") ?? "unknown"}:${pathname}`;
+    if (!(await env.AUTH_LIMIT.limit({ key })).success) {
+      throw new HttpError(429, "too many requests, wait a minute and try again");
+    }
+  }
   for (const { method, pattern, handle } of routes) {
     const match = request.method === method && pattern.exec(request.url);
     if (match) {

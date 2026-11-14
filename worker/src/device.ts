@@ -9,14 +9,22 @@ const DEVICE_CODE_TTL_SECONDS = 600;
 const POLL_INTERVAL_SECONDS = 5;
 
 export async function startDeviceAuth({ request, env }: Context): Promise<Response> {
+  const body = await request.json().catch(() => null);
+  const requested = (body as { deviceName?: unknown } | null)?.deviceName;
+  const deviceName = typeof requested === "string" ? requested.slice(0, 100) : null;
+  const ip = request.headers.get("CF-Connecting-IP");
+  const country = (request.cf as { country?: string } | undefined)?.country ?? null;
   const deviceCode = randomToken();
   const userCode = randomUserCode();
 
   await env.DB.batch([
     env.DB.prepare("DELETE FROM device_codes WHERE expires_at <= datetime('now')"),
     env.DB
-      .prepare("INSERT INTO device_codes (device_code_hash, user_code, expires_at) VALUES (?, ?, datetime('now', ?))")
-      .bind(await hashToken(deviceCode), userCode, `+${DEVICE_CODE_TTL_SECONDS} seconds`),
+      .prepare(
+        `INSERT INTO device_codes (device_code_hash, user_code, expires_at, device_name, ip, country, created_at)
+         VALUES (?, ?, datetime('now', ?), ?, ?, ?, datetime('now'))`,
+      )
+      .bind(await hashToken(deviceCode), userCode, `+${DEVICE_CODE_TTL_SECONDS} seconds`, deviceName, ip, country),
   ]);
 
   const verificationUri = `${new URL(request.url).origin}/activate`;
@@ -25,7 +33,7 @@ export async function startDeviceAuth({ request, env }: Context): Promise<Respon
       deviceCode,
       userCode,
       verificationUri,
-      verificationUriComplete: `${verificationUri}?code=${userCode}`,
+      verificationUriComplete: verificationUri,
       interval: POLL_INTERVAL_SECONDS,
       expiresIn: DEVICE_CODE_TTL_SECONDS,
     },
@@ -47,16 +55,16 @@ export async function issueSessionToken({ request, env }: Context): Promise<Resp
     .prepare(
       `DELETE FROM device_codes
        WHERE device_code_hash = ? AND user_id IS NOT NULL AND expires_at > datetime('now')
-       RETURNING user_id`,
+       RETURNING user_id, device_name`,
     )
     .bind(deviceCodeHash)
-    .first<{ user_id: string }>();
+    .first<{ user_id: string; device_name: string | null }>();
 
   if (!claimed) {
     throw new HttpError(400, (await isPending(env.DB, deviceCodeHash)) ? "authorization_pending" : "expired_token");
   }
 
-  return json(await createSession(env, claimed.user_id, deviceName ?? "unknown device"));
+  return json(await createSession(env, claimed.user_id, claimed.device_name ?? deviceName ?? "unknown device"));
 }
 
 export async function approveUserCode(db: D1Database, userCode: string, userId: string): Promise<boolean> {
@@ -68,6 +76,23 @@ export async function approveUserCode(db: D1Database, userCode: string, userId: 
     .bind(userId, userCode)
     .run();
   return result.meta.changes === 1;
+}
+
+export type PendingDevice = {
+  deviceName: string | null;
+  ip: string | null;
+  country: string | null;
+  createdAt: string | null;
+};
+
+export async function findPendingDevice(db: D1Database, userCode: string): Promise<PendingDevice | null> {
+  return db
+    .prepare(
+      `SELECT device_name AS deviceName, ip, country, created_at AS createdAt FROM device_codes
+       WHERE user_code = ? AND user_id IS NULL AND expires_at > datetime('now')`,
+    )
+    .bind(userCode)
+    .first<PendingDevice>();
 }
 
 async function isPending(db: D1Database, deviceCodeHash: string): Promise<boolean> {

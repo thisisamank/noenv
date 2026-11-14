@@ -39,19 +39,23 @@ export async function registrationVerify({ request, env }: Context): Promise<Res
   return finishRegistration(request, env, await findInvite(env.DB, token), response);
 }
 
+const MIN_SETUP_TOKEN_LENGTH = 16;
+
 export async function setupStatus({ env }: Context): Promise<Response> {
-  return json({ available: await isSetupAvailable(env), email: canSendEmail(env) });
+  const open = await isSetupOpen(env);
+  const email = canSendEmail(env);
+  return json({ available: await isSetupAvailable(env), email, missingToken: open && !email && !hasSetupToken(env) });
 }
 
 export async function setupOptions({ request, env }: Context): Promise<Response> {
-  const { email } = await readJson(request);
-  return beginRegistration(request, env, await claimAdmin(env, email));
+  const { email, token } = await readJson(request);
+  return beginRegistration(request, env, await claimAdmin(env, email, token));
 }
 
 export async function setupVerify({ request, env }: Context): Promise<Response> {
   requireSameOrigin(request);
-  const { email, response } = await readJson(request);
-  return finishRegistration(request, env, await claimAdmin(env, email), response);
+  const { email, token, response } = await readJson(request);
+  return finishRegistration(request, env, await claimAdmin(env, email, token), response);
 }
 
 export async function emailSetupLink({ request, env }: Context): Promise<Response> {
@@ -77,17 +81,27 @@ export async function emailSetupLink({ request, env }: Context): Promise<Respons
 }
 
 export async function isSetupAvailable(env: Context["env"]): Promise<boolean> {
+  return (canSendEmail(env) || hasSetupToken(env)) && (await isSetupOpen(env));
+}
+
+async function isSetupOpen(env: Context["env"]): Promise<boolean> {
   if (!env.ADMIN_EMAIL) return false;
   return (await env.DB.prepare("SELECT 1 FROM passkeys LIMIT 1").first()) === null;
 }
 
-async function claimAdmin(env: Context["env"], email: unknown): Promise<Invite> {
-  const expected = env.ADMIN_EMAIL?.trim().toLowerCase();
-  if (!(await isSetupAvailable(env)) || typeof email !== "string" || email.trim().toLowerCase() !== expected) {
-    throw new HttpError(403, "setup is closed, or this is not the admin email set at deploy time");
-  }
+function hasSetupToken(env: Context["env"]): boolean {
+  return (env.SETUP_TOKEN?.trim().length ?? 0) >= MIN_SETUP_TOKEN_LENGTH;
+}
+
+async function claimAdmin(env: Context["env"], email: unknown, token: unknown): Promise<Invite> {
   if (canSendEmail(env)) {
     throw new HttpError(403, "this deployment sends the setup link by email, use Email me the setup link");
+  }
+  const expected = env.ADMIN_EMAIL?.trim().toLowerCase();
+  const emailMatches = typeof email === "string" && email.trim().toLowerCase() === expected;
+  const tokenMatches = typeof token === "string" && hasSetupToken(env) && (await hashToken(token.trim())) === (await hashToken(env.SETUP_TOKEN!.trim()));
+  if (!(await isSetupAvailable(env)) || !emailMatches || !tokenMatches) {
+    throw new HttpError(403, "setup is closed, or the admin email or setup token does not match the values set at deploy time");
   }
   return upsertAdmin(env);
 }
@@ -111,7 +125,7 @@ async function beginRegistration(request: Request, env: Context["env"], user: In
     userName: user.email,
     userID: new TextEncoder().encode(user.userId),
     attestationType: "none",
-    authenticatorSelection: { residentKey: "required", userVerification: "preferred" },
+    authenticatorSelection: { residentKey: "required", userVerification: "required" },
   });
   await storeChallenge(env.DB, options.challenge, "register", user.userId);
   return json(options);
@@ -124,7 +138,7 @@ async function finishRegistration(request: Request, env: Context["env"], user: I
     expectedChallenge: (challenge) => consumeChallenge(env.DB, challenge, "register", user.userId),
     expectedOrigin: origin,
     expectedRPID: hostname,
-    requireUserVerification: false,
+    requireUserVerification: true,
   }).catch(() => ({ verified: false as const }));
 
   if (!result.verified) {
@@ -137,12 +151,15 @@ async function finishRegistration(request: Request, env: Context["env"], user: I
       .prepare("INSERT INTO passkeys (id, user_id, public_key, counter, transports) VALUES (?, ?, ?, ?, ?)")
       .bind(credential.id, user.userId, toBase64(credential.publicKey), credential.counter, JSON.stringify(credential.transports ?? [])),
     env.DB.prepare("DELETE FROM invites WHERE user_id = ?").bind(user.userId),
+    env.DB.prepare("DELETE FROM passkeys WHERE user_id = ? AND id != ?").bind(user.userId, credential.id),
+    env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(user.userId),
+    env.DB.prepare("UPDATE users SET removed_at = NULL WHERE id = ?").bind(user.userId),
   ]);
   return signedIn(env, user.userId);
 }
 
 export async function loginOptions({ request, env }: Context): Promise<Response> {
-  const options = await generateAuthenticationOptions({ rpID: new URL(request.url).hostname, userVerification: "preferred" });
+  const options = await generateAuthenticationOptions({ rpID: new URL(request.url).hostname, userVerification: "required" });
   await storeChallenge(env.DB, options.challenge, "login", null);
   return json(options);
 }
@@ -150,6 +167,10 @@ export async function loginOptions({ request, env }: Context): Promise<Response>
 export async function loginVerify({ request, env }: Context): Promise<Response> {
   requireSameOrigin(request);
   const { response } = (await readJson(request)) as { response?: AuthenticationResponseJSON };
+  return signedIn(env, await verifyPasskey(request, env, response));
+}
+
+export async function verifyPasskey(request: Request, env: Context["env"], response: AuthenticationResponseJSON | undefined): Promise<string> {
   const passkey = await env.DB
     .prepare("SELECT * FROM passkeys WHERE id = ?")
     .bind(typeof response?.id === "string" ? response.id : "")
@@ -171,7 +192,7 @@ export async function loginVerify({ request, env }: Context): Promise<Response> 
       counter: passkey.counter,
       transports: JSON.parse(passkey.transports),
     },
-    requireUserVerification: false,
+    requireUserVerification: true,
   }).catch(() => ({ verified: false, authenticationInfo: undefined }));
 
   if (!result.verified || !result.authenticationInfo) {
@@ -182,7 +203,7 @@ export async function loginVerify({ request, env }: Context): Promise<Response> 
     .prepare("UPDATE passkeys SET counter = ?, last_used_at = datetime('now') WHERE id = ?")
     .bind(result.authenticationInfo.newCounter, passkey.id)
     .run();
-  return signedIn(env, passkey.user_id);
+  return passkey.user_id;
 }
 
 export async function logout({ request, env }: Context): Promise<Response> {

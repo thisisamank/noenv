@@ -9,7 +9,7 @@ export type Route =
   | { page: "policies"; repo?: string; environment?: string }
   | { page: "devices" }
   | { page: "join"; token: string }
-  | { page: "activate"; code?: string };
+  | { page: "activate" };
 
 export function href(route: Route): string {
   switch (route.page) {
@@ -22,7 +22,7 @@ export function href(route: Route): string {
     case "join":
       return `#/join/${route.token}`;
     case "activate":
-      return `#/activate${route.code ? `/${route.code}` : ""}`;
+      return "#/activate";
     case "overview":
       return "#/";
     default:
@@ -42,7 +42,7 @@ export function parse(hash: string): Route {
     return { page: "join", token: repo };
   }
   if (section === "activate") {
-    return { page: "activate", code: repo };
+    return { page: "activate" };
   }
   if (section === "policies") {
     return { page: "policies", repo: repo ? decodeURIComponent(repo) : undefined, environment };
