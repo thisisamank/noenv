@@ -54,8 +54,16 @@
       <p>New features, changes, and fixes to the CLI, the Worker, and the dashboard. Newest first. <a class="text-link" href="/changelog.xml">Atom feed</a></p>
     </div>
     <div class="log">
-    <article class="release latest" id="cli-0-4-0">
-      <div class="release-date"><div><time datetime="2026-11-14">November 14, 2026</time><span class="badge solid">CLI 0.4.0</span></div></div>
+    <article class="release latest" id="cli-0-5-0">
+      <div class="release-date"><div><time datetime="2026-11-22">November 22, 2026</time><span class="badge solid">CLI 0.5.0</span></div></div>
+      <div class="release-body">
+        <h2>Use noenv on more than one computer</h2>
+        <p>Use noenv on more than one computer. Update the CLI on every computer where you use noenv.</p>
+        <h3>Added</h3><ul><li><code>noenv device approve CODE</code> gives a new computer your key. The new computer shows the code after you sign in on it.</li><li><code>noenv device list</code> lists your computers and the ones that wait for approval. <code>noenv device remove ID</code> stops a computer from getting your key.</li><li>When the deployment can send email, you can sign in to the dashboard with a 6-digit code by email, and approve a terminal with an email code.</li><li>The dashboard has an Account page where you change your email. A code sent to the new address confirms the change.</li></ul><h3>Changed</h3><ul><li>A new computer no longer stops with "your noenv key was registered on another device". The shell hook shows a code to approve on a computer where noenv already works, and loads secrets at the next prompt after the approval.</li></ul>
+      </div>
+    </article>
+    <article class="release" id="cli-0-4-0">
+      <div class="release-date"><div><time datetime="2026-11-14">November 14, 2026</time><span class="badge">CLI 0.4.0</span></div></div>
       <div class="release-body">
         <h2>Signed secrets and safer sign-in</h2>
         <p>A security release. Update the CLI, then have an editor run <code>noenv secret sign</code> in each environment.</p>

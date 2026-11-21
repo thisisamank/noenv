@@ -4,7 +4,14 @@
   <link href="https://noenv.thisisamank.in/changelog"/>
   <link rel="self" href="https://noenv.thisisamank.in/changelog.xml"/>
   <id>https://noenv.thisisamank.in/changelog</id>
-  <updated>2026-11-14T00:00:00Z</updated>
+  <updated>2026-11-22T00:00:00Z</updated>
+  <entry>
+    <title>Use noenv on more than one computer</title>
+    <link href="https://noenv.thisisamank.in/changelog#cli-0-5-0"/>
+    <id>https://noenv.thisisamank.in/changelog#cli-0-5-0</id>
+    <updated>2026-11-22T00:00:00Z</updated>
+    <content type="html">&lt;p&gt;Use noenv on more than one computer. Update the CLI on every computer where you use noenv.&lt;/p&gt;&lt;h3&gt;Added&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;&lt;code&gt;noenv device approve CODE&lt;/code&gt; gives a new computer your key. The new computer shows the code after you sign in on it.&lt;/li&gt;&lt;li&gt;&lt;code&gt;noenv device list&lt;/code&gt; lists your computers and the ones that wait for approval. &lt;code&gt;noenv device remove ID&lt;/code&gt; stops a computer from getting your key.&lt;/li&gt;&lt;li&gt;When the deployment can send email, you can sign in to the dashboard with a 6-digit code by email, and approve a terminal with an email code.&lt;/li&gt;&lt;li&gt;The dashboard has an Account page where you change your email. A code sent to the new address confirms the change.&lt;/li&gt;&lt;/ul&gt;&lt;h3&gt;Changed&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;A new computer no longer stops with "your noenv key was registered on another device". The shell hook shows a code to approve on a computer where noenv already works, and loads secrets at the next prompt after the approval.&lt;/li&gt;&lt;/ul&gt;</content>
+  </entry>
   <entry>
     <title>Signed secrets and safer sign-in</title>
     <link href="https://noenv.thisisamank.in/changelog#cli-0-4-0"/>
