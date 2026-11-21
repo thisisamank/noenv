@@ -174,6 +174,7 @@ function revokeAccess(db: D1Database, userId: string): D1PreparedStatement[] {
   return [
     db.prepare("UPDATE users SET public_key = NULL WHERE id = ?").bind(userId),
     db.prepare("DELETE FROM environment_keys WHERE user_id = ?").bind(userId),
+    db.prepare("DELETE FROM device_keys WHERE user_id = ?").bind(userId),
     db.prepare("DELETE FROM sessions WHERE user_id = ?").bind(userId),
   ];
 }

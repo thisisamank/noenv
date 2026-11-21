@@ -1,7 +1,9 @@
+import { rename } from "node:fs/promises";
 import { join } from "node:path";
 import { exportPrivateKey, exportPublicKey, generateKeyPair, importPrivateKey } from "@noenv/crypto";
 import { api } from "./api.ts";
 import type { Deployment } from "./deployment.ts";
+import { receiveAccountKey } from "./device-keys.ts";
 import { readJsonFile, writeJsonFile } from "./files.ts";
 
 export type Identity = {
@@ -33,12 +35,20 @@ export async function ensureIdentity(deployment: Deployment, token: string): Pro
 
   if (local && me.publicKey === local.publicKey) return local;
   if (me.publicKey) {
-    throw new Error(`your noenv key was registered on another device, copy ${identityPath(deployment)} from that device`);
+    return storeReceivedKey(deployment, me.publicKey, await receiveAccountKey(deployment, token, me.publicKey), local !== null);
   }
 
   const identity = local ?? (await createIdentity(deployment));
   await api(deployment, "PUT", "/v1/me/public-key", { token, body: { publicKey: identity.publicKey } });
   return identity;
+}
+
+/** Saves an account key that another device approved. An older key file on this device is kept beside it, not deleted. */
+async function storeReceivedKey(deployment: Deployment, publicKey: string, privateKey: CryptoKey, replacing: boolean): Promise<Identity> {
+  const path = identityPath(deployment);
+  if (replacing) await rename(path, `${path}.replaced-${Date.now()}`);
+  await writeJsonFile(path, { publicKey, privateKey: await exportPrivateKey(privateKey) }, "wx");
+  return { publicKey, privateKey };
 }
 
 async function createIdentity(deployment: Deployment): Promise<Identity> {

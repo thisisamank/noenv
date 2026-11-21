@@ -2,6 +2,7 @@ import { approveDevice, describeDevice, redirectToActivation } from "./activatio
 import { listDevices, reportCompliance, signOutDevice } from "./compliance.ts";
 import type { Context, Env, Handler } from "./context.ts";
 import { deploymentInfo } from "./deployment.ts";
+import { approveDeviceKey, listDeviceKeys, registerDeviceKey, removeDeviceKey } from "./device-keys.ts";
 import { issueSessionToken, startDeviceAuth } from "./device.ts";
 import { withEnvironment, withOrgAdmin, withProject, withUser } from "./guards.ts";
 import { HttpError, json } from "./http.ts";
@@ -80,6 +81,10 @@ const routes: Route[] = [
   route("GET", "/v1/me", withUser(getMe)),
   route("POST", "/v1/revisions", withUser(readRevisions)),
   route("PUT", "/v1/me/public-key", withUser(setPublicKey)),
+  route("GET", "/v1/me/devices", withUser(listDeviceKeys)),
+  route("POST", "/v1/me/devices", withUser(registerDeviceKey)),
+  route("POST", "/v1/me/devices/:deviceId/approve", withUser(approveDeviceKey)),
+  route("DELETE", "/v1/me/devices/:deviceId", withUser(removeDeviceKey)),
   route("POST", "/v1/me/email", withUser(requestEmailChange)),
   route("POST", "/v1/me/email/confirm", withUser(confirmEmailChange)),
   route("GET", "/v1/users", withOrgAdmin(listUsers)),

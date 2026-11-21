@@ -14,6 +14,7 @@ import { withoutLoadedSecrets } from "../src/commands/exec.ts";
 import { hookEnv, type HookInput, type HookOutput } from "../src/hook-env.ts";
 import { refresh } from "../src/refresh.ts";
 import { findTarget } from "../src/target.ts";
+import { approveDeviceKey } from "../src/device-keys.ts";
 import { ensureIdentity, type Identity } from "../src/identity.ts";
 import { remoteSecretStore } from "../src/secret-store.ts";
 import { checkForUpdates, markChanged } from "../src/watch.ts";
@@ -350,4 +351,25 @@ test("the hook looks up the deployment named in .noenv", async () => {
   const asked: (string | undefined)[] = [];
   await hookEnv({ ...input({ cwd: root }), resolveDeployment: async (url) => (asked.push(url), null) });
   assert.deepEqual(asked, ["https://noenv.acme.com"]);
+});
+
+test("a new computer shows the approval code once, then loads secrets after approval", async () => {
+  const desktop = await deploymentIn(await mkdtemp(join(tmpdir(), "noenv-desktop-")));
+  await signIn(desktop, adminToken);
+
+  const waiting = await run({ deployment: desktop });
+  const notice = waiting.messages.filter((message) => message.includes("noenv device approve"));
+  assert.equal(notice.length, 1, JSON.stringify(waiting.messages));
+  assert.deepEqual(secretLines(waiting.lines), []);
+  const code = notice[0]!.match(/approve ([0-9a-f-]{19})/)![1]!;
+
+  const state = bash(`${waiting.lines.join("\n")}\nprintf '%s' "$_NOENV_STATE"`);
+  const again = await hookEnv(input({ deployment: desktop, state }));
+  assert.deepEqual(again.messages, [], "the code is not shown on every prompt");
+  assert.ok(again.refresh, "the hook keeps checking for approval");
+
+  await approveDeviceKey(deployment, adminToken, adminIdentity.privateKey, code);
+  const loaded = await run({ deployment: desktop, state });
+  assert.ok(loaded.messages.includes("loaded 1 secrets for github.com/acme/backend (development)"), JSON.stringify(loaded.messages));
+  assert.equal(bash(`${loaded.lines.join("\n")}\nprintf '%s' "$API_KEY"`), SECRET);
 });

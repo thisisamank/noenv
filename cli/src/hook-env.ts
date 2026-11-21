@@ -1,5 +1,6 @@
 import { describeSkipped, openBundle } from "./bundle.ts";
 import type { Deployment } from "./deployment.ts";
+import { DEVICE_PENDING } from "./device-keys.ts";
 import { loadIdentity } from "./identity.ts";
 import { readCache, type CacheEntry } from "./refresh.ts";
 import { loadSession, readPendingSignIn, startSignIn } from "./session.ts";
@@ -94,6 +95,12 @@ async function load(input: HookInput, resolved: Resolved, state: LoadedState | n
   const entry = await readCache(deployment, target);
   const identity = await loadIdentity(deployment);
   const refresh = entering || state.retry || revision === CHANGED || !entry || !identity;
+
+  if (!identity && entry && "error" in entry && entry.status === DEVICE_PENDING) {
+    // Keep checking on each prompt, and show the approval code once, until another device approves this one.
+    if (entering || state.notified !== entry.error) messages.push(entry.error);
+    return { lines: restore, state: { ...empty, retry: true, notified: entry.error }, refresh: true };
+  }
 
   if (!entering && !state.retry && (!entry || !identity || ("raw" in entry && entry.raw.revision === state.revision))) {
     return { lines: [], state, refresh };

@@ -11,7 +11,9 @@ import {
   generateKeyPair,
   importPrivateKey,
   importPublicKey,
+  unwrapIdentityKey,
   unwrapPrivateKey,
+  wrapIdentityKey,
   wrapPrivateKey,
 } from "@noenv/crypto";
 
@@ -87,4 +89,14 @@ test("a wrapped key cannot be used as a secret ciphertext", async () => {
   const wrapped = await wrapPrivateKey((await generateKeyPair()).privateKey, user.publicKey);
 
   await assert.rejects(decryptSecret(user.privateKey, wrapped, context));
+});
+
+test("an account key copied to a device cannot be read as an environment key", async () => {
+  const device = await generateKeyPair();
+  const account = await generateKeyPair();
+  const wrapped = await wrapIdentityKey(account.privateKey, device.publicKey);
+
+  await assert.rejects(unwrapPrivateKey(wrapped, device.privateKey));
+  const unwrapped = await unwrapIdentityKey(wrapped, device.privateKey);
+  assert.equal(await publicKeyOf(unwrapped), await exportPublicKey(account.publicKey));
 });

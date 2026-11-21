@@ -6,6 +6,7 @@ import { fetchRawBundle, openBundle, type RawBundle } from "./bundle.ts";
 import { describeOutcome, reportCompliance } from "./compliance.ts";
 import type { Deployment } from "./deployment.ts";
 import { readJsonFile, writeJsonFile } from "./files.ts";
+import { DEVICE_PENDING, DeviceApprovalPending } from "./device-keys.ts";
 import { ensureIdentity, loadIdentity } from "./identity.ts";
 import { remoteSecretStore } from "./secret-store.ts";
 import { clearSession, loadSession } from "./session.ts";
@@ -52,6 +53,7 @@ async function fetchEntry(deployment: Deployment, target: Target): Promise<Cache
     }
     return { raw, notes, blocked: result.blocked };
   } catch (error) {
+    if (error instanceof DeviceApprovalPending) return { error: error.message, status: DEVICE_PENDING };
     if (!(error instanceof ApiError)) return null;
     if (error.status === 401) await clearSession(deployment);
     return { error: error.message, status: error.status };

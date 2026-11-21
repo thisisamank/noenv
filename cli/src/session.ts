@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { api, ApiError } from "./api.ts";
 import type { Deployment } from "./deployment.ts";
 import { readJsonFile, removeFile, writeJsonFile } from "./files.ts";
+import { DeviceApprovalPending } from "./device-keys.ts";
 import { ensureIdentity } from "./identity.ts";
 
 type Session = {
@@ -104,7 +105,10 @@ async function poll(deployment: Deployment, pending: PendingSignIn): Promise<boo
       });
       await writeJsonFile(sessionPath(deployment), session);
       await removeFile(pendingPath(deployment));
-      await ensureIdentity(deployment, session.token);
+      await ensureIdentity(deployment, session.token).catch((error) => {
+        // Signed in; the shell hook shows how to approve this device.
+        if (!(error instanceof DeviceApprovalPending)) throw error;
+      });
       return true;
     } catch (error) {
       if (!isRetryable(error)) break;

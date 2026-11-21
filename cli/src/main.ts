@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { accountCommand } from "./commands/account.ts";
 import { authCommand, statusCommand } from "./commands/auth.ts";
+import { deviceCommand } from "./commands/device.ts";
 import { execCommand } from "./commands/exec.ts";
 import { wranglerCommand } from "./commands/wrangler.ts";
 import { migrateCommand } from "./commands/migrate.ts";
@@ -18,6 +19,10 @@ const USAGE = `usage: noenv <command>
   account remove NAME        forget an account
   auth [NAME]                sign in to an account (default: the one in .noenv)
   status                     show the account, user, and project
+  device list                list your other devices and the ones that wait for approval
+  device approve CODE        give a new computer your key; CODE is what the new computer
+                             shows after you sign in on it
+  device remove ID           stop a device from getting your key
   init [--account NAME]      create the project, the environment, and the .noenv file;
                              with more than one account, it asks which one to use
   exec -- COMMAND            run COMMAND with this repository's secrets, for agents,
@@ -49,6 +54,7 @@ const commands: Record<string, (args: string[]) => Promise<void>> = {
   watch: watchCommand,
   auth: authCommand,
   status: statusCommand,
+  device: deviceCommand,
   init: initCommand,
   secret: secretCommand,
   migrate: migrateCommand,
