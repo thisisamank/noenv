@@ -15,7 +15,7 @@ import { markerPath, writeMarker } from "./watch.ts";
 
 export type CacheEntry =
   | { raw: RawBundle; notes: string[]; blocked: boolean }
-  | { error: string; status: number };
+  | { error: string; status: number; checkedAt?: number };
 
 export async function readCache(deployment: Deployment, target: Target): Promise<CacheEntry | null> {
   return readJsonFile<CacheEntry>(cachePath(deployment, target)).catch(() => null);
@@ -53,7 +53,7 @@ async function fetchEntry(deployment: Deployment, target: Target): Promise<Cache
     }
     return { raw, notes, blocked: result.blocked };
   } catch (error) {
-    if (error instanceof DeviceApprovalPending) return { error: error.message, status: DEVICE_PENDING };
+    if (error instanceof DeviceApprovalPending) return { error: error.message, status: DEVICE_PENDING, checkedAt: Date.now() };
     if (!(error instanceof ApiError)) return null;
     if (error.status === 401) await clearSession(deployment);
     return { error: error.message, status: error.status };

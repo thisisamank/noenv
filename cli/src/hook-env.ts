@@ -52,6 +52,9 @@ type Step = {
   refresh: boolean;
 };
 
+/** How long a waiting device goes without asking the server again whether it is approved. */
+export const APPROVAL_CHECK_MS = 10_000;
+
 const STATE_VARIABLES = ["_NOENV_STATE", "_NOENV_RETRY", "_NOENV_REV_FILE", "_NOENV_REV", "_NOENV_RESTORE"];
 
 export async function hookEnv(input: HookInput): Promise<HookOutput> {
@@ -97,9 +100,11 @@ async function load(input: HookInput, resolved: Resolved, state: LoadedState | n
   const refresh = entering || state.retry || revision === CHANGED || !entry || !identity;
 
   if (!identity && entry && "error" in entry && entry.status === DEVICE_PENDING) {
-    // Keep checking on each prompt, and show the approval code once, until another device approves this one.
+    // Show the approval code once, and check again at a later prompt until another device approves this one.
+    // A check only when the last one is old stops a loop: in zsh, the end of a check runs this hook again.
     if (entering || state.notified !== entry.error) messages.push(entry.error);
-    return { lines: restore, state: { ...empty, retry: true, notified: entry.error }, refresh: true };
+    const stale = Date.now() - (entry.checkedAt ?? 0) >= APPROVAL_CHECK_MS;
+    return { lines: restore, state: { ...empty, retry: true, notified: entry.error }, refresh: stale };
   }
 
   if (!entering && !state.retry && (!entry || !identity || ("raw" in entry && entry.raw.revision === state.revision))) {

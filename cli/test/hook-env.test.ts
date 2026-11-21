@@ -11,7 +11,7 @@ import { api, repoPath } from "../src/api.ts";
 import type { Deployment } from "../src/deployment.ts";
 import { writeJsonFile } from "../src/files.ts";
 import { withoutLoadedSecrets } from "../src/commands/exec.ts";
-import { hookEnv, type HookInput, type HookOutput } from "../src/hook-env.ts";
+import { APPROVAL_CHECK_MS, hookEnv, type HookInput, type HookOutput } from "../src/hook-env.ts";
 import { refresh } from "../src/refresh.ts";
 import { findTarget } from "../src/target.ts";
 import { approveDeviceKey } from "../src/device-keys.ts";
@@ -366,10 +366,14 @@ test("a new computer shows the approval code once, then loads secrets after appr
   const state = bash(`${waiting.lines.join("\n")}\nprintf '%s' "$_NOENV_STATE"`);
   const again = await hookEnv(input({ deployment: desktop, state }));
   assert.deepEqual(again.messages, [], "the code is not shown on every prompt");
-  assert.ok(again.refresh, "the hook keeps checking for approval");
+  assert.equal(again.refresh, undefined, "right after a check, the hook does not start another one, so zsh does not loop");
 
   await approveDeviceKey(deployment, adminToken, adminIdentity.privateKey, code);
-  const loaded = await run({ deployment: desktop, state });
+  const now = Date.now;
+  Date.now = () => now() + APPROVAL_CHECK_MS;
+  const later = await hookEnv(input({ deployment: desktop, state }));
+  assert.ok(later.refresh, "a later prompt checks again");
+  const loaded = await run({ deployment: desktop, state }).finally(() => (Date.now = now));
   assert.ok(loaded.messages.includes("loaded 1 secrets for github.com/acme/backend (development)"), JSON.stringify(loaded.messages));
   assert.equal(bash(`${loaded.lines.join("\n")}\nprintf '%s' "$API_KEY"`), SECRET);
 });
