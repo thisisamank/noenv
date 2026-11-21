@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.1 — 2026-11-22
+
+### Fixed
+
+- In zsh, the prompt no longer flickers while a new computer waits for approval. The shell hook checked for approval in a loop. It now checks again at a prompt only when the last check is older than 10 seconds.
+
 ## 0.5.0 — 2026-11-22
 
 Use noenv on more than one computer. Update the CLI on every computer where you use noenv.
