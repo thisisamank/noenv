@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.5.0 — 2026-11-22
+
+Use noenv on more than one computer. Update the CLI on every computer where you use noenv.
+
+### Added
+
+- `noenv device approve CODE` gives a new computer your key. The new computer shows the code after you sign in on it.
+- `noenv device list` lists your computers and the ones that wait for approval. `noenv device remove ID` stops a computer from getting your key.
+
+### Changed
+
+- A new computer no longer stops with "your noenv key was registered on another device". The shell hook shows a code to approve on a computer where noenv already works, and loads secrets at the next prompt after the approval.
+
 ## 0.4.0 — 2026-11-14
 
 A security release. Update the CLI, then have an editor run `noenv secret sign` in each environment.
