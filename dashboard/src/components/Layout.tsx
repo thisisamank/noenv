@@ -56,11 +56,13 @@ export function Layout({ me, route, attention, onSignedOut, children }: LayoutPr
               </button>
             ))}
           </div>
-          <Avatar email={me.email} />
-          <div>
-            <b>{displayName(me.email)}</b>
-            <span>{me.isAdmin ? "Org admin" : "Member"}</span>
-          </div>
+          <a className="account-link" href={href({ page: "account" })} title="Account" aria-current={route.page === "account" ? "page" : undefined}>
+            <Avatar email={me.email} />
+            <div>
+              <b>{displayName(me.email)}</b>
+              <span>{me.isAdmin ? "Org admin" : "Member"}</span>
+            </div>
+          </a>
           <button className="icon-btn" aria-label="Sign out" title="Sign out" onClick={() => signOut().then(onSignedOut)}>
             <Icon name="logout" />
           </button>

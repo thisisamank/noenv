@@ -6,6 +6,7 @@ import { issueSessionToken, startDeviceAuth } from "./device.ts";
 import { withEnvironment, withOrgAdmin, withProject, withUser } from "./guards.ts";
 import { HttpError, json } from "./http.ts";
 import { cancelInvite, readInvite, regenerateInvite } from "./invites.ts";
+import { confirmEmailChange, requestApprovalCode, requestEmailChange, requestSignInCode, verifySignInCode } from "./email-codes.ts";
 import { landingPage } from "./landing.ts";
 import {
   loginOptions,
@@ -61,6 +62,9 @@ const routes: Route[] = [
   route("POST", "/v1/auth/token", issueSessionToken),
   route("POST", "/v1/auth/activate", withUser(approveDevice)),
   route("POST", "/v1/auth/activate/device", withUser(describeDevice)),
+  route("POST", "/v1/auth/activate/email", withUser(requestApprovalCode)),
+  route("POST", "/v1/auth/email/code", requestSignInCode),
+  route("POST", "/v1/auth/email", verifySignInCode),
   route("POST", "/v1/auth/passkeys/register/options", registrationOptions),
   route("POST", "/v1/auth/passkeys/register", registrationVerify),
   route("POST", "/v1/auth/passkeys/login/options", loginOptions),
@@ -76,6 +80,8 @@ const routes: Route[] = [
   route("GET", "/v1/me", withUser(getMe)),
   route("POST", "/v1/revisions", withUser(readRevisions)),
   route("PUT", "/v1/me/public-key", withUser(setPublicKey)),
+  route("POST", "/v1/me/email", withUser(requestEmailChange)),
+  route("POST", "/v1/me/email/confirm", withUser(confirmEmailChange)),
   route("GET", "/v1/users", withOrgAdmin(listUsers)),
   route("GET", "/v1/users/lookup", withUser(findUser)),
   route("POST", "/v1/users", withOrgAdmin(inviteUser)),
@@ -134,6 +140,8 @@ export default {
 const RATE_LIMITED = new Set([
   "/v1/auth/device",
   "/v1/auth/passkeys/login/options",
+  "/v1/auth/email/code",
+  "/v1/auth/email",
   "/v1/auth/passkeys/register/options",
   "/v1/setup/options",
   "/v1/setup",

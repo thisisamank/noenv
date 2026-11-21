@@ -152,6 +152,7 @@ export async function removeUser(context: UserContext): Promise<Response> {
     env.DB.prepare("DELETE FROM memberships WHERE user_id = ?").bind(target),
     env.DB.prepare("DELETE FROM passkeys WHERE user_id = ?").bind(target),
     env.DB.prepare("DELETE FROM invites WHERE user_id = ?").bind(target),
+    env.DB.prepare("DELETE FROM email_codes WHERE user_id = ?").bind(target),
     env.DB.prepare("UPDATE policies SET updated_by = ? WHERE updated_by = ?").bind(userId, target),
     user.hasHistory
       ? env.DB.prepare("UPDATE users SET is_admin = 0, removed_at = datetime('now') WHERE id = ?").bind(target)

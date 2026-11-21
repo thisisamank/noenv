@@ -14,6 +14,7 @@ import { SecretPage } from "./pages/Secret.tsx";
 import { Team } from "./pages/Team.tsx";
 import { useRoute, type Route } from "./router.ts";
 import type { Device, Me, Project } from "./types.ts";
+import { Account } from "./pages/Account.tsx";
 import { sortEnvironments } from "./format.ts";
 import { useResource } from "./use-resource.ts";
 
@@ -58,15 +59,17 @@ export function App() {
     <AppContext.Provider value={{ me: me.data, projects, devices }}>
       <ToastProvider>
         <Layout me={me.data} route={route} attention={attention} onSignedOut={me.reload}>
-          <Page route={route} />
+          <Page route={route} onAccountChanged={me.reload} />
         </Layout>
       </ToastProvider>
     </AppContext.Provider>
   );
 }
 
-function Page({ route }: { route: Route }) {
+function Page({ route, onAccountChanged }: { route: Route; onAccountChanged: () => void }) {
   switch (route.page) {
+    case "account":
+      return <Account onChanged={onAccountChanged} />;
     case "projects":
       return <Projects />;
     case "project":

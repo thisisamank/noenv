@@ -2,6 +2,7 @@ import type { AuthenticationResponseJSON } from "@simplewebauthn/server";
 import type { Context, UserContext } from "./context.ts";
 import { approveUserCode, findPendingDevice, USER_CODE } from "./device.ts";
 import { HttpError, json, readJson } from "./http.ts";
+import { redeemCode } from "./email-codes.ts";
 import { verifyPasskey } from "./passkeys.ts";
 
 export async function redirectToActivation({ request }: Context): Promise<Response> {
@@ -18,10 +19,13 @@ export async function describeDevice({ request, env }: UserContext): Promise<Res
 }
 
 export async function approveDevice({ request, env, userId }: UserContext): Promise<Response> {
-  const { code, response } = await readJson(request);
+  const { code, response, emailCode } = await readJson(request);
   const userCode = parseCode(code);
-  const passkeyUser = await verifyPasskey(request, env, response as AuthenticationResponseJSON | undefined);
-  if (passkeyUser !== userId) {
+  if (emailCode !== undefined) {
+    if (!(await redeemCode(env.DB, userId, "approve", emailCode))) {
+      throw new HttpError(401, "the email code is wrong or expired, request a new code");
+    }
+  } else if ((await verifyPasskey(request, env, response as AuthenticationResponseJSON | undefined)) !== userId) {
     throw new HttpError(403, "confirm with a passkey of the signed-in account");
   }
   if (!(await approveUserCode(env.DB, userCode, userId))) {

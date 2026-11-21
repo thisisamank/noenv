@@ -227,6 +227,10 @@ textarea { height: auto; min-height: 96px; padding: 8px 12px; font-family: "Geis
 .connect-body { display: grid; gap: 12px; justify-items: start; padding: 16px; }
 .connect pre { width: 100%; padding: 12px 16px; border-radius: 6px; background: var(--bg-2); border: 1px solid var(--line); white-space: pre-wrap; word-break: break-all; }
 .side-foot .icon-btn { margin-left: auto; }
+.account-link { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 4px 6px; margin: -4px -6px; border-radius: 6px; transition: background 120ms; }
+.account-link:hover, .account-link[aria-current="page"] { background: var(--hover); }
+.account-link b { display: block; font-weight: 500; font-size: 13px; }
+.account-link span { display: block; font-size: 12px; color: var(--muted); }
 
 .term { width: min(480px, 100%); border: 1px solid var(--line-2); border-radius: 8px; background-color: var(--bg-2); background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 24px 24px; background-position: -1px -1px; padding: 20px; display: grid; gap: 16px; font-family: "Geist Mono Variable", "SF Mono", Menlo, monospace; font-size: 13px; }
 .term-lines { display: grid; gap: 6px; padding: 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }

@@ -104,6 +104,8 @@ Identity:
 - `npm run setup -- --admin you@example.com` deploys from a local checkout and prints a one-time setup link for the first admin.
 - Admins invite people from the dashboard. An invite creates a one-time link (valid 7 days) that the admin sends. Opening it creates the person's passkey.
 - When the deployment has the `EMAIL` send binding and an `EMAIL_FROM` address, noenv emails the invite link through Cloudflare Email Sending. The link is still returned, so the admin can send it another way. With email on, the first admin's setup link is also emailed to `ADMIN_EMAIL` instead of being claimable by typing the address.
+- When email is on (`EMAIL` binding and `EMAIL_FROM`), a person can also sign in with a 6-digit code sent to their account email. The code expires in 10 minutes, works once, and stops working after 5 wrong guesses. A new code replaces the old one, and noenv sends at most one code a minute to an address. The answer is the same for unknown and removed addresses, and the email is sent in the background, so the endpoint does not show which addresses have accounts.
+- When email is on, a signed-in person can change their own email on the Account page. noenv sends a 6-digit code to the new address, and the change happens only after the person enters it. The new address must not belong to another account, including a removed one. After the change, noenv emails a notice to the old address, and open sign-in and approval codes stop working.
 - A lost passkey is recovered with a new invite link from an admin. Registering through that link deletes the user's other passkeys and ends their sessions, so the lost passkey stops working.
 - Org admins can grant and remove org admin, and can remove a person from the organization. Removal ends the person's sessions and deletes their passkeys, invites, memberships, and environment keys. A person with secret history stays as a hidden record, so history keeps its author. Admins cannot change or remove themselves, so the organization always keeps an admin.
 - Org admins can reset a person's key after a lost laptop or a leaked key. The reset clears the public key, deletes the person's environment keys, and ends their sessions. The person registers a new key from a fresh device, and an admin runs `noenv grant` again.
@@ -113,7 +115,7 @@ Identity:
   - The CLI sends its host name when it starts sign-in. The Worker stores it with the requester IP, country, and start time.
   - The approval URL never carries the code. The person types the code that their own terminal shows.
   - The dashboard shows the device name, network, and start time before approval.
-  - Approval needs a fresh passkey assertion from the signed-in user, not only the session cookie.
+  - Approval needs a fresh passkey assertion from the signed-in user, not only the session cookie. When email is on, a fresh 6-digit approval code sent to the user's email can replace the passkey. An approval code cannot sign in, and a sign-in code cannot approve a device.
 
 Secret loading requirements:
 
@@ -278,7 +280,7 @@ Secret entry must not expose values through terminal echo or command-line argume
 
 - Passkeys require user verification (PIN or biometric) for registration and sign-in.
 - When `minCliVersion` is set, a bearer client that sends no version header is rejected like an old CLI. Cookie (dashboard) requests are exempt.
-- The `AUTH_LIMIT` rate limit binding limits each address to 20 requests a minute on each unauthenticated sign-in and setup endpoint.
+- The `AUTH_LIMIT` rate limit binding limits each address to 20 requests a minute on each unauthenticated sign-in and setup endpoint, including `/v1/auth/email/code` and `/v1/auth/email`.
 - Only org admins and project admins can look up a user by email.
 
 **Threat model:** NOENV prevents accidental secret exposure. It does not prevent an authorized developer or application from deliberately inspecting injected environment variables.
@@ -288,6 +290,7 @@ Known limits that the design accepts:
 - **Secrets are ambient in the shell.** Every process started in a loaded repository gets every secret, including install scripts, coding agents, and editor extensions. `noenv exec -- <command>` limits the secrets to one command.
 - **The project comes from the local git origin.** A directory that claims a known origin loads that project's secrets for a person who has access. This adds little risk on top of the previous limit, because that person already runs code in the real repository.
 - **`identity.json` is the root credential.** It is a plaintext PKCS8 private key, mode 0600, in the NOENV config directory. Anyone who copies it and holds a session can unwrap every environment key of that person. Keep it out of backups and dotfile sync. After a leak, an admin resets the key and rotates the affected environments.
+- **Email sign-in makes the inbox a credential.** When email is on, a person who controls a user's inbox can sign in as that user and approve a terminal. A person who holds a user's browser session can move the account to an inbox they control; the notice to the old address is the only warning. Turn off email (remove `EMAIL_FROM`) to allow passkeys only.
 - **Trust on first use.** The first key pin and the first `noenv grant` trust the server. Compare fingerprints out of band when the server could be compromised.
 
 ## 11. MVP Scope

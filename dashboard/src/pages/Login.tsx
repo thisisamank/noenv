@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { api } from "../api.ts";
 import { AuthScreen } from "../components/AuthScreen.tsx";
 import { ErrorLine, Loading } from "../components/Feedback.tsx";
-import { setUpAdmin, signInWithPasskey } from "../passkeys.ts";
+import { requestSignInCode, setUpAdmin, signInWithEmailCode, signInWithPasskey } from "../passkeys.ts";
 import { errorMessage, useResource } from "../use-resource.ts";
 
 export function Login({ onSignedIn }: { onSignedIn: () => void }) {
@@ -95,7 +95,82 @@ export function Login({ onSignedIn }: { onSignedIn: () => void }) {
         Sign in with passkey
       </button>
       <ErrorLine message={error} />
+      {setup.data?.email && <EmailSignIn onSignedIn={onSignedIn} />}
       <p className="muted small">New here? Open the invite link an admin sent you.</p>
     </AuthScreen>
+  );
+}
+
+function EmailSignIn({ onSignedIn }: { onSignedIn: () => void }) {
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [sentTo, setSentTo] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+
+  async function run(action: () => Promise<void>) {
+    setBusy(true);
+    setError(undefined);
+    try {
+      await action();
+    } catch (caught) {
+      setError(errorMessage(caught));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const sendCode = (event: FormEvent) => (
+    event.preventDefault(),
+    run(async () => {
+      await requestSignInCode(email);
+      setSentTo(email);
+      setCode("");
+    })
+  );
+
+  const verify = (event: FormEvent) => (
+    event.preventDefault(),
+    run(async () => {
+      await signInWithEmailCode(sentTo!, code);
+      onSignedIn();
+    })
+  );
+
+  if (sentTo) {
+    return (
+      <form onSubmit={verify} style={{ display: "grid", gap: 12, width: "100%" }}>
+        <p className="muted small">If {sentTo} has a noenv account, a 6-digit code is on its way. It expires in 10 minutes.</p>
+        <input
+          className="mono code-input"
+          aria-label="Sign-in code"
+          placeholder="000000"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          maxLength={6}
+          value={code}
+          onChange={(event) => setCode(event.target.value.replace(/\D/g, ""))}
+          autoFocus
+        />
+        <button className="btn primary wide" disabled={busy || code.length !== 6} aria-busy={busy}>
+          Sign in
+        </button>
+        <button type="button" className="btn wide" onClick={() => setSentTo(undefined)} disabled={busy}>
+          Use a different email
+        </button>
+        <ErrorLine message={error} />
+      </form>
+    );
+  }
+
+  return (
+    <form onSubmit={sendCode} style={{ display: "grid", gap: 12, width: "100%" }}>
+      <p className="muted small">No passkey on this device? Get a sign-in code by email.</p>
+      <input type="email" placeholder="you@company.com" aria-label="Email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+      <button className="btn wide" disabled={busy} aria-busy={busy}>
+        Email me a code
+      </button>
+      <ErrorLine message={error} />
+    </form>
   );
 }

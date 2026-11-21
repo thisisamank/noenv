@@ -5,7 +5,7 @@ import { ErrorLine } from "../components/Feedback.tsx";
 import { timeAgo } from "../format.ts";
 import { passkeyAssertion } from "../passkeys.ts";
 import { href } from "../router.ts";
-import { errorMessage } from "../use-resource.ts";
+import { errorMessage, useResource } from "../use-resource.ts";
 
 type PendingDevice = { deviceName: string | null; ip: string | null; country: string | null; createdAt: string | null };
 
@@ -14,6 +14,8 @@ export function Activate() {
   const [device, setDevice] = useState<PendingDevice>();
   const [state, setState] = useState<"idle" | "busy" | "done">("idle");
   const [error, setError] = useState<string>();
+  const [emailCode, setEmailCode] = useState<string>();
+  const setup = useResource(() => api<{ email: boolean }>("GET", "/v1/setup"), []);
 
   async function run(action: () => Promise<void>) {
     setState("busy");
@@ -35,6 +37,19 @@ export function Activate() {
   const approve = () =>
     run(async () => {
       await api("POST", "/v1/auth/activate", { code, response: await passkeyAssertion() });
+      setState("done");
+    });
+
+  const sendEmailCode = () =>
+    run(async () => {
+      await api("POST", "/v1/auth/activate/email");
+      setEmailCode("");
+      setState("idle");
+    });
+
+  const approveWithEmailCode = () =>
+    run(async () => {
+      await api("POST", "/v1/auth/activate", { code, emailCode });
       setState("done");
     });
 
@@ -61,10 +76,37 @@ export function Activate() {
           <dt>Started</dt>
           <dd>{device.createdAt ? timeAgo(device.createdAt) : "unknown"}</dd>
         </dl>
-        <button className="btn primary wide" onClick={approve} disabled={state === "busy"} aria-busy={state === "busy"}>
-          Approve with passkey
-        </button>
-        <button className="btn wide" onClick={() => setDevice(undefined)} disabled={state === "busy"}>
+        {emailCode === undefined ? (
+          <>
+            <button className="btn primary wide" onClick={approve} disabled={state === "busy"} aria-busy={state === "busy"}>
+              Approve with passkey
+            </button>
+            {setup.data?.email && (
+              <button className="btn wide" onClick={sendEmailCode} disabled={state === "busy"}>
+                Approve with an email code
+              </button>
+            )}
+          </>
+        ) : (
+          <>
+            <p className="muted small">We emailed a 6-digit code to your account address. It expires in 10 minutes.</p>
+            <input
+              className="mono code-input"
+              aria-label="Email code"
+              placeholder="000000"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              value={emailCode}
+              onChange={(event) => setEmailCode(event.target.value.replace(/\D/g, ""))}
+              autoFocus
+            />
+            <button className="btn primary wide" onClick={approveWithEmailCode} disabled={state === "busy" || emailCode.length !== 6} aria-busy={state === "busy"}>
+              Approve
+            </button>
+          </>
+        )}
+        <button className="btn wide" onClick={() => (setDevice(undefined), setEmailCode(undefined))} disabled={state === "busy"}>
           This is not me
         </button>
         <ErrorLine message={error} />

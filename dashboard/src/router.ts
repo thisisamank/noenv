@@ -8,6 +8,7 @@ export type Route =
   | { page: "team" }
   | { page: "policies"; repo?: string; environment?: string }
   | { page: "devices" }
+  | { page: "account" }
   | { page: "join"; token: string }
   | { page: "activate" };
 
@@ -47,7 +48,7 @@ export function parse(hash: string): Route {
   if (section === "policies") {
     return { page: "policies", repo: repo ? decodeURIComponent(repo) : undefined, environment };
   }
-  if (section === "projects" || section === "team" || section === "devices") {
+  if (section === "projects" || section === "team" || section === "devices" || section === "account") {
     return { page: section };
   }
   return { page: "overview" };

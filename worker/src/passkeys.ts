@@ -215,7 +215,7 @@ export async function logout({ request, env }: Context): Promise<Response> {
   return new Response(null, { status: 204, headers: { "Set-Cookie": clearedSessionCookie() } });
 }
 
-async function signedIn(env: Context["env"], userId: string): Promise<Response> {
+export async function signedIn(env: Context["env"], userId: string): Promise<Response> {
   const session = await createSession(env, userId, BROWSER_DEVICE);
   return new Response(JSON.stringify({ signedIn: true }), {
     headers: { "Content-Type": "application/json", "Set-Cookie": sessionCookie(session.token, session.expiresAt) },

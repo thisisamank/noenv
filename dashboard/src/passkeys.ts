@@ -27,3 +27,11 @@ export async function setUpAdmin(email: string, token: string): Promise<void> {
   const response = await startRegistration({ optionsJSON });
   await api("POST", "/v1/setup", { email, token, response });
 }
+
+export async function requestSignInCode(email: string): Promise<void> {
+  await api("POST", "/v1/auth/email/code", { email });
+}
+
+export async function signInWithEmailCode(email: string, code: string): Promise<void> {
+  await api("POST", "/v1/auth/email", { email, code });
+}
